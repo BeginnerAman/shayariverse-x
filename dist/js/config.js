@@ -4,8 +4,8 @@
 export const CONFIG = {
   APP_NAME: 'ShayariVerse X',
   APP_SHORT: 'SVX',
-  VERSION: '1.0.8',
-  APK_DOWNLOAD_URL: 'https://github.com/BeginnerAman/shayariverse-x/releases/download/v1.0.8/ShayariVerse-X-v1.0.8.apk',
+  VERSION: '1.0.9',
+  APK_DOWNLOAD_URL: 'https://github.com/BeginnerAman/shayariverse-x/releases/download/v1.0.9/ShayariVerse-X-v1.0.9.apk',
   RELEASE_URL: 'https://github.com/BeginnerAman/shayariverse-x/releases/latest',
   REPO_URL: 'https://github.com/BeginnerAman/shayariverse-x',
 
@@ -18,7 +18,7 @@ export const CONFIG = {
   SONGS_JSON: 'preloaded-songs.json',
 
   // Music Search APIs
-  JIOSAAVN_API: 'https://saavn.dev/api/search/songs',
+  JIOSAAVN_API: 'https://www.jiosaavn.com/api.php',
   ITUNES_API: 'https://itunes.apple.com/search',
   SEARCH_DEBOUNCE_MS: 400,
   ITUNES_COUNTRY: 'IN',

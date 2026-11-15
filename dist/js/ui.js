@@ -235,6 +235,9 @@ export function createFeedCardElement(shayari) {
     textContainer.textContent = shayari.formatted || shayari.content;
   }
 
+  // Preserve in-memory shayari object for instant 0ms edits
+  card._shayari = shayari;
+
   // Double-tap heart burst handler
   let lastTap = 0;
   card.addEventListener('pointerup', (e) => {
@@ -267,16 +270,24 @@ export async function triggerHeartBurst(cardElement, shayariId) {
 
   const likeBtn = cardElement.querySelector('[data-action="like"]');
   const countSpan = likeBtn?.querySelector('.svx-like-count');
+  const wasLiked = likeBtn?.classList.contains('liked');
+
+  // Optimistic 0ms update if not already liked
+  if (!wasLiked && likeBtn && countSpan) {
+    const currentCount = parseInt(countSpan.textContent || '0', 10);
+    likeBtn.classList.add('liked');
+    likeBtn.innerHTML = `${renderIcon('HeartFilled')}<span class="svx-like-count">${currentCount + 1}</span>`;
+  }
 
   const executeLike = async (user) => {
     try {
       const result = await db.toggleLike(user.id, shayariId);
-      if (likeBtn && countSpan) {
+      if (likeBtn) {
         likeBtn.classList.toggle('liked', result.liked);
         likeBtn.innerHTML = `${renderIcon(result.liked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${result.newCount}</span>`;
       }
     } catch (err) {
-      console.error('[SVX] Like error:', err);
+      console.warn('[SVX] Like error:', err);
     }
   };
 
@@ -348,21 +359,35 @@ export class SVXFeedController {
       this.container.innerHTML = '';
 
       if (!shayaris || shayaris.length === 0) {
+        const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
         this.container.innerHTML = `
           <div class="svx-glass-card mood-purple" style="text-align: center; padding: 48px 20px; margin-top: 16px;">
             <div class="svx-placeholder-icon" style="margin: 0 auto 16px auto;">
-              ${renderIcon('Feather', 'svx-icon-lg')}
+              ${renderIcon(isOffline ? 'WifiOff' : 'Feather', 'svx-icon-lg')}
             </div>
-            <h2 class="svx-placeholder-title" style="font-size: 20px; margin-bottom: 8px;">A Fresh Canvas Awaits</h2>
+            <h2 class="svx-placeholder-title" style="font-size: 20px; margin-bottom: 8px;">
+              ${isOffline ? 'Offline Mode' : 'A Fresh Canvas Awaits'}
+            </h2>
             <p class="svx-placeholder-desc" style="max-width: 300px; margin: 0 auto 24px auto;">
-              No shayaris posted yet. Be the first to express your words with music.
+              ${isOffline ? 'Please connect to the internet or mobile data to load new Shayaris.' : 'No shayaris posted yet. Be the first to express your words with music.'}
             </p>
-            <button class="svx-btn-post" id="svx-feed-empty-create-btn" type="button" style="margin: 0 auto; padding: 12px 24px; font-size: 14px;">
-              ${renderIcon('Plus', 'svx-icon-sm')}
-              <span>Compose First Shayari</span>
-            </button>
+            ${isOffline ? `
+              <button class="svx-btn-post" id="svx-feed-retry-btn" type="button" style="margin: 0 auto; padding: 12px 24px; font-size: 14px;">
+                ${renderIcon('RotateCcw', 'svx-icon-sm')}
+                <span>Retry Connection</span>
+              </button>
+            ` : `
+              <button class="svx-btn-post" id="svx-feed-empty-create-btn" type="button" style="margin: 0 auto; padding: 12px 24px; font-size: 14px;">
+                ${renderIcon('Plus', 'svx-icon-sm')}
+                <span>Compose First Shayari</span>
+              </button>
+            `}
           </div>
         `;
+        const retryBtn = document.getElementById('svx-feed-retry-btn');
+        retryBtn?.addEventListener('click', () => {
+          this.loadFeed();
+        });
         const createBtn = document.getElementById('svx-feed-empty-create-btn');
         createBtn?.addEventListener('click', () => {
           if (this.composerModal) {
@@ -430,9 +455,28 @@ export class SVXFeedController {
         }
       } else if (action === 'like' && shayariId) {
         const handleLike = async (user) => {
-          const result = await db.toggleLike(user.id, shayariId);
-          target.classList.toggle('liked', result.liked);
-          target.innerHTML = `${renderIcon(result.liked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${result.newCount}</span>`;
+          const isCurrentlyLiked = target.classList.contains('liked');
+          const countSpan = target.querySelector('.svx-like-count');
+          const currentCount = parseInt(countSpan?.textContent || '0', 10);
+          const nextLiked = !isCurrentlyLiked;
+          const nextCount = Math.max(0, currentCount + (nextLiked ? 1 : -1));
+
+          // 0ms Optimistic UI update
+          target.classList.toggle('liked', nextLiked);
+          target.innerHTML = `${renderIcon(nextLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${nextCount}</span>`;
+
+          try {
+            const result = await db.toggleLike(user.id, shayariId);
+            if (result && typeof result.newCount === 'number') {
+              const liveSpan = target.querySelector('.svx-like-count');
+              if (liveSpan) liveSpan.textContent = result.newCount;
+            }
+          } catch (err) {
+            console.warn('[SVX] Like failed, reverting optimistic state:', err);
+            target.classList.toggle('liked', isCurrentlyLiked);
+            target.innerHTML = `${renderIcon(isCurrentlyLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${currentCount}</span>`;
+            showToast('Could not update like. Check connection.', 'AlertTriangle');
+          }
         };
 
         if (this.authModal) {
@@ -447,11 +491,23 @@ export class SVXFeedController {
         }
       } else if (action === 'edit-shayari' && shayariId) {
         if (this.composerModal) {
-          const shayaris = await db.getFeed(1, 100);
-          const targetShayari = shayaris.find(s => s.id === shayariId);
-          if (targetShayari) {
-            this.composerModal.openForEdit(targetShayari);
+          // 0ms Instant: Read directly from card memory/DOM without network lag!
+          let targetShayari = card?._shayari;
+          if (!targetShayari) {
+            const rawText = card?.querySelector('.svx-shayari-text')?.textContent || '';
+            const mood = card?.getAttribute('data-mood') || 'purple';
+            const pill = card?.querySelector('.svx-audio-pill');
+            targetShayari = {
+              id: shayariId,
+              content: rawText,
+              formatted: rawText,
+              mood_theme: mood,
+              song_name: pill?.querySelector('.svx-song-title')?.textContent || null,
+              song_artist: pill?.querySelector('.svx-song-artist')?.textContent || null,
+              song_url: pill?.getAttribute('data-song-url') || null
+            };
           }
+          this.composerModal.openForEdit(targetShayari);
         }
       } else if (action === 'delete-shayari' && shayariId) {
         const currentUser = db.getCurrentUser();
@@ -1073,18 +1129,65 @@ export class SVXCommentModal {
     if (!text || !this.currentShayariId) return;
 
     const postComment = async (user) => {
+      // 0ms Optimistic UI Append
+      const tempId = `comm-temp-${Date.now()}`;
+      const initials = (user.display_name || user.handle || 'U').slice(0, 2).toUpperCase();
+      const verifiedBadge = user.is_verified ? renderIcon('BadgeCheck') : '';
+
+      // Remove empty state if present
+      const emptyState = this.listEl?.querySelector('.svx-comment-empty-state');
+      if (emptyState) emptyState.remove();
+
+      const itemEl = document.createElement('div');
+      itemEl.className = 'svx-comment-item';
+      itemEl.setAttribute('data-comment-id', tempId);
+      itemEl.innerHTML = `
+        <div class="svx-comment-avatar">${initials}</div>
+        <div class="svx-comment-content">
+          <div class="svx-comment-header">
+            <div class="svx-comment-author-info">
+              <span class="svx-comment-author">${escapeHtml(user.display_name || user.handle)}</span>
+              ${verifiedBadge}
+              <span class="svx-comment-handle">@${user.handle}</span>
+            </div>
+            <div class="svx-comment-meta-right">
+              <span class="svx-comment-time">just now</span>
+            </div>
+          </div>
+          <div class="svx-comment-text">${escapeHtml(text)}</div>
+        </div>
+      `;
+
+      if (this.listEl) {
+        this.listEl.appendChild(itemEl);
+        this.listEl.scrollTop = this.listEl.scrollHeight;
+      }
+
+      if (this.input) this.input.value = '';
+
+      // Optimistically update counts in modal header and card
+      const currentCount = this.listEl ? this.listEl.querySelectorAll('.svx-comment-item').length : 1;
+      if (this.countBadge) {
+        this.countBadge.textContent = `${currentCount} comment${currentCount === 1 ? '' : 's'}`;
+      }
+      this.onCommentChange?.(this.currentShayariId, currentCount);
+      showToast("Alfaaz darj ho gaye!", "Check");
+
       try {
         if (this.sendBtn) this.sendBtn.disabled = true;
-        await db.addComment(user.id, this.currentShayariId, text);
-        if (this.input) this.input.value = '';
-        await this.loadComments();
-
-        // Notify feed
-        const comments = await db.getComments(this.currentShayariId);
-        this.onCommentChange?.(this.currentShayariId, comments.length);
-        showToast("Alfaaz darj ho gaye!", "Check");
+        const saved = await db.addComment(user.id, this.currentShayariId, text);
+        if (saved && saved.id) {
+          itemEl.setAttribute('data-comment-id', saved.id);
+        }
       } catch (err) {
-        await SVXDialog.alert({ title: "Comment Failed", message: err.message || "Failed to post comment." });
+        console.warn('[SVX Comments] Post failed, removing optimistic node:', err);
+        itemEl.remove();
+        const revertCount = this.listEl ? this.listEl.querySelectorAll('.svx-comment-item').length : 0;
+        if (this.countBadge) {
+          this.countBadge.textContent = `${revertCount} comment${revertCount === 1 ? '' : 's'}`;
+        }
+        this.onCommentChange?.(this.currentShayariId, revertCount);
+        showToast("Comment failed. Check internet connection.", "AlertTriangle");
       } finally {
         if (this.sendBtn) this.sendBtn.disabled = false;
       }
@@ -1639,7 +1742,8 @@ export class SVXProfileController {
     const listContainer = document.getElementById('svx-author-cards-container');
     if (listContainer) {
       if (userShayaris.length === 0) {
-        listContainer.innerHTML = `<div class="svx-placeholder-desc" style="text-align: center; padding: 24px;">You haven't posted any Shayari yet. Tap + Create to compose your first piece.</div>`;
+        const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+        listContainer.innerHTML = `<div class="svx-placeholder-desc" style="text-align: center; padding: 24px;">${isOffline ? 'Offline Mode • Connect to internet to sync your Shayaris.' : "You haven't posted any Shayari yet. Tap + Create to compose your first piece."}</div>`;
       } else {
         userShayaris.forEach(s => {
           const card = createFeedCardElement({
@@ -1712,9 +1816,28 @@ export class SVXProfileController {
         }
       } else if (action === 'like' && shayariId) {
         const handleLike = async (user) => {
-          const result = await db.toggleLike(user.id, shayariId);
-          target.classList.toggle('liked', result.liked);
-          target.innerHTML = `${renderIcon(result.liked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${result.newCount}</span>`;
+          const isCurrentlyLiked = target.classList.contains('liked');
+          const countSpan = target.querySelector('.svx-like-count');
+          const currentCount = parseInt(countSpan?.textContent || '0', 10);
+          const nextLiked = !isCurrentlyLiked;
+          const nextCount = Math.max(0, currentCount + (nextLiked ? 1 : -1));
+
+          // 0ms Optimistic UI update
+          target.classList.toggle('liked', nextLiked);
+          target.innerHTML = `${renderIcon(nextLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${nextCount}</span>`;
+
+          try {
+            const result = await db.toggleLike(user.id, shayariId);
+            if (result && typeof result.newCount === 'number') {
+              const liveSpan = target.querySelector('.svx-like-count');
+              if (liveSpan) liveSpan.textContent = result.newCount;
+            }
+          } catch (err) {
+            console.warn('[SVX Profile] Like failed, reverting optimistic state:', err);
+            target.classList.toggle('liked', isCurrentlyLiked);
+            target.innerHTML = `${renderIcon(isCurrentlyLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${currentCount}</span>`;
+            showToast('Could not update like. Check connection.', 'AlertTriangle');
+          }
         };
         if (this.authModal) {
           this.authModal.requireAuth(handleLike);
@@ -1738,11 +1861,22 @@ export class SVXProfileController {
         }
       } else if (action === 'edit-shayari' && shayariId) {
         if (this.composerModal) {
-          const shayaris = await db.getFeed(1, 100);
-          const targetShayari = shayaris.find(s => s.id === shayariId);
-          if (targetShayari) {
-            this.composerModal.openForEdit(targetShayari);
+          let targetShayari = card?._shayari;
+          if (!targetShayari) {
+            const rawText = card?.querySelector('.svx-shayari-text')?.textContent || '';
+            const mood = card?.getAttribute('data-mood') || 'purple';
+            const pill = card?.querySelector('.svx-audio-pill');
+            targetShayari = {
+              id: shayariId,
+              content: rawText,
+              formatted: rawText,
+              mood_theme: mood,
+              song_name: pill?.querySelector('.svx-song-title')?.textContent || null,
+              song_artist: pill?.querySelector('.svx-song-artist')?.textContent || null,
+              song_url: pill?.getAttribute('data-song-url') || null
+            };
           }
+          this.composerModal.openForEdit(targetShayari);
         }
       } else if (action === 'delete-shayari' && shayariId) {
         const currentUser = db.getCurrentUser();
@@ -1879,6 +2013,111 @@ export class SVXRouter {
   }
 }
 
+/**
+ * In-Place 0ms DOM Updater for Edited Shayari
+ * Updates Feed AND Profile tab instances simultaneously without scroll loss or feed teardown
+ */
+export function updateShayariInDOM(shayari) {
+  if (!shayari || !shayari.id) return;
+  const cards = document.querySelectorAll(`.svx-feed-card[data-shayari-id="${shayari.id}"]`);
+  cards.forEach(card => {
+    // 1. Text & typography
+    const textEl = card.querySelector('.svx-shayari-text');
+    if (textEl) {
+      textEl.textContent = shayari.formatted || shayari.content;
+      const fit = calculateAutoFit(shayari.content || '');
+      textEl.className = `svx-shayari-text font-${shayari.font_style || 'nastaliq'} ${fit.className}`;
+    }
+
+    // 2. Mood theme
+    if (shayari.mood_theme) {
+      card.setAttribute('data-mood', shayari.mood_theme);
+      card.className = `svx-glass-card svx-feed-card mood-${shayari.mood_theme}`;
+    }
+
+    // 3. Audio Pill
+    let pill = card.querySelector('.svx-audio-pill');
+    if (shayari.song_url) {
+      if (!pill) {
+        pill = document.createElement('div');
+        pill.className = 'svx-audio-pill';
+        const cardBody = card.querySelector('.svx-card-body');
+        if (cardBody && cardBody.nextSibling) {
+          card.insertBefore(pill, cardBody.nextSibling);
+        }
+      }
+      pill.setAttribute('data-song-url', shayari.song_url);
+      pill.innerHTML = `
+        <div class="svx-album-art" aria-hidden="true">
+          ${renderIcon('Disc')}
+        </div>
+        <div class="svx-audio-info">
+          <span class="svx-song-title">${shayari.song_name || 'Shayari BGM'}</span>
+          <span class="svx-song-artist">${shayari.song_artist || 'Viral Audio'}</span>
+        </div>
+        <div class="svx-equalizer paused" aria-hidden="true">
+          <div class="svx-eq-bar"></div>
+          <div class="svx-eq-bar"></div>
+          <div class="svx-eq-bar"></div>
+          <div class="svx-eq-bar"></div>
+          <div class="svx-eq-bar"></div>
+        </div>
+        <button class="svx-audio-toggle-btn" data-action="toggle-audio" aria-label="Play or Pause BGM">
+          ${renderIcon('Play', 'svx-icon-sm')}
+        </button>
+      `;
+    } else if (pill) {
+      pill.remove();
+    }
+
+    // Cache updated object on DOM node
+    card._shayari = { ...(card._shayari || {}), ...shayari };
+  });
+}
+
+/**
+ * Real-time Offline & Online Network Monitor
+ * Manages top offline banner pill and handles seamless auto-reconnect
+ */
+export function initNetworkMonitor(feedController, profileController) {
+  const banner = document.getElementById('svx-offline-banner');
+  const retryBtn = document.getElementById('svx-offline-retry-btn');
+
+  function updateNetworkState() {
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    if (banner) {
+      banner.classList.toggle('active', !isOnline);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', () => {
+      updateNetworkState();
+      showToast('Back online • Synced', 'Wifi');
+      feedController?.loadFeed();
+      profileController?.render();
+    });
+
+    window.addEventListener('offline', () => {
+      updateNetworkState();
+      showToast('Offline Mode • Showing cached posts', 'WifiOff');
+    });
+
+    retryBtn?.addEventListener('click', () => {
+      if (navigator.onLine) {
+        updateNetworkState();
+        feedController?.loadFeed();
+        profileController?.render();
+        showToast('Reconnected & synced', 'Check');
+      } else {
+        showToast('Still offline. Check your data connection.', 'AlertTriangle');
+      }
+    });
+
+    updateNetworkState();
+  }
+}
+
 /* 12. Initialize Shell UI */
 export function initUI() {
   console.log(`[SVX] Initializing ${CONFIG.APP_NAME} (${CONFIG.APP_SHORT}) v${CONFIG.VERSION}`);
@@ -1918,12 +2157,14 @@ export function initUI() {
   const composerModal = new SVXComposerModal({
     onPostCreated: (newShayari, isUpdate) => {
       if (isUpdate) {
-        feedController?.loadFeed();
+        updateShayariInDOM(newShayari);
+        showToast("Shayari updated successfully!", "Check");
       } else {
         feedController?.prependCard(newShayari);
+        router?.switchView('feed');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast("Naye jazbaat shaya ho gaye!", "Check");
       }
-      router?.switchView('feed');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     onOpenMusicPicker: () => {
       router?.switchView('discover');
@@ -1977,7 +2218,10 @@ export function initUI() {
   // 9. Initialize Router
   router = new SVXRouter(composerModal, authModal, profileController);
 
-  // 10. Background In-App Update Check (Option A)
+  // 10. Real-time Offline & Online Network Monitor
+  initNetworkMonitor(feedController, profileController);
+
+  // 11. Background In-App Update Check (Option A)
   setTimeout(() => {
     SVXUpdateChecker.checkForUpdates(false);
   }, 2500);

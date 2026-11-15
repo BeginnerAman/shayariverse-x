@@ -374,6 +374,50 @@ export class LocalStorageDB {
     return true;
   }
 
+  // --- Persistent Offline Cache Helpers ---
+  cacheFeed(feed) {
+    if (!Array.isArray(feed) || feed.length === 0) return;
+    try {
+      this.storage.setItem(`${this.prefix}cached_feed`, JSON.stringify(feed));
+      const current = JSON.parse(this.storage.getItem(this.kShayaris) || '[]');
+      const map = new Map();
+      current.forEach(s => map.set(s.id, s));
+      feed.forEach(s => map.set(s.id, { ...map.get(s.id), ...s }));
+      this.storage.setItem(this.kShayaris, JSON.stringify(Array.from(map.values())));
+    } catch (e) {
+      console.warn('[SVX DB] Cache feed write error:', e);
+    }
+  }
+
+  getCachedFeed() {
+    try {
+      const raw = this.storage.getItem(`${this.prefix}cached_feed`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return null;
+  }
+
+  cacheUserShayaris(userId, list) {
+    if (!userId || !Array.isArray(list)) return;
+    try {
+      this.storage.setItem(`${this.prefix}cached_user_${userId}`, JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  getCachedUserShayaris(userId) {
+    try {
+      const raw = this.storage.getItem(`${this.prefix}cached_user_${userId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return null;
+  }
+
   // --- Likes Engine ---
   async toggleLike(userId, shayariId) {
     const likes = JSON.parse(this.storage.getItem(this.kLikes) || '[]');
@@ -537,23 +581,33 @@ export class SupabaseDB {
       throw new Error("Supabase credentials not configured.");
     }
     const url = `${this.url}/rest/v1${endpoint}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
     const opts = {
       ...options,
+      signal: options.signal || controller.signal,
       headers: {
         ...this.headers,
         ...(options.headers || {})
       }
     };
-    const res = await fetch(url, opts);
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`Supabase API error (${res.status}): ${errText}`);
+    try {
+      const res = await fetch(url, opts);
+      clearTimeout(timeoutId);
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`Supabase API error (${res.status}): ${errText}`);
+      }
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        return res.json();
+      }
+      return null;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
     }
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      return res.json();
-    }
-    return null;
   }
 
   init() {
@@ -998,11 +1052,18 @@ export class UnifiedDB {
     try {
       if (this.isLiveMode()) {
         const feed = await this.supabase.getFeed(page, limit);
-        if (feed && feed.length > 0) return feed;
+        if (feed && feed.length > 0) {
+          if (page === 1) {
+            this.local.cacheFeed(feed);
+          }
+          return feed;
+        }
       }
     } catch (err) {
-      console.warn('[SVX DB] Live feed fetch failed, falling back to local dataset:', err);
+      console.warn('[SVX DB] Live feed fetch failed, falling back to local/cached dataset:', err);
     }
+    const cached = page === 1 ? this.local.getCachedFeed() : null;
+    if (cached && cached.length > 0) return cached;
     return await this.local.getFeed(page, limit);
   }
 
@@ -1010,40 +1071,76 @@ export class UnifiedDB {
     try {
       if (this.isLiveMode()) {
         const list = await this.supabase.getShayarisByUser(userId);
-        if (list && list.length > 0) return list;
+        if (list && list.length > 0) {
+          this.local.cacheUserShayaris(userId, list);
+          return list;
+        }
       }
     } catch (err) {
-      console.warn('[SVX DB] Live user shayaris fetch failed, using local:', err);
+      console.warn('[SVX DB] Live user shayaris fetch failed, using cached/local:', err);
     }
+    const cached = this.local.getCachedUserShayaris(userId);
+    if (cached && cached.length > 0) return cached;
     return await this.local.getShayarisByUser(userId);
   }
 
   async createShayari(data) {
+    let result = null;
     try {
       if (this.isLiveMode()) {
-        return await this.supabase.createShayari(data);
+        result = await this.supabase.createShayari(data);
       }
     } catch (err) {
       console.warn('[SVX DB] Live createShayari failed, saving to local:', err);
     }
-    return await this.local.createShayari(data);
+    if (!result) {
+      result = await this.local.createShayari(data);
+    } else {
+      try {
+        const shayaris = JSON.parse(this.local.storage.getItem(this.local.kShayaris) || '[]');
+        shayaris.unshift(result);
+        this.local.storage.setItem(this.local.kShayaris, JSON.stringify(shayaris));
+        const cached = this.local.getCachedFeed() || [];
+        cached.unshift(result);
+        this.local.cacheFeed(cached);
+      } catch {}
+    }
+    return result;
   }
 
   async updateShayari(shayariId, userId, data) {
+    let result = null;
+    const currentUser = this.getCurrentUser();
     try {
       if (this.isLiveMode()) {
-        return await this.supabase.updateShayari(shayariId, userId, data);
+        result = await this.supabase.updateShayari(shayariId, userId, data);
+        if (result && currentUser) {
+          result = {
+            ...result,
+            author_name: currentUser.display_name,
+            author_handle: currentUser.handle,
+            is_verified: currentUser.is_verified || false,
+            is_admin: currentUser.is_admin || false
+          };
+        }
       }
     } catch (err) {
       console.warn('[SVX DB] Live updateShayari failed, using local:', err);
     }
-    return await this.local.updateShayari(shayariId, userId, data);
+    if (!result) {
+      result = await this.local.updateShayari(shayariId, userId, data);
+    } else {
+      try {
+        await this.local.updateShayari(shayariId, userId, data);
+      } catch {}
+    }
+    return result;
   }
 
   async deleteShayari(shayariId, userId, isAdmin = false) {
     try {
       if (this.isLiveMode()) {
-        return await this.supabase.deleteShayari(shayariId, userId, isAdmin);
+        await this.supabase.deleteShayari(shayariId, userId, isAdmin);
       }
     } catch (err) {
       console.warn('[SVX DB] Live deleteShayari failed, using local:', err);

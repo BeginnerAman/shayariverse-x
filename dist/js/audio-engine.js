@@ -282,39 +282,53 @@ class AudioEngine {
     const trimmed = (query || '').trim();
     if (!trimmed) return [];
 
-    // 1. Primary: JioSaavn API
+    // 1. Primary: JioSaavn Official Engine
     if (typeof fetch !== 'undefined') {
       try {
-        const saavnUrl = `${CONFIG.JIOSAAVN_API}?query=${encodeURIComponent(trimmed)}`;
+        const saavnUrl = `${CONFIG.JIOSAAVN_API}?__call=search.getResults&q=${encodeURIComponent(trimmed)}&_format=json&_marker=0&api_version=4&ctx=web6dot0&p=1&n=15`;
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
 
         const res = await fetch(saavnUrl, { signal: controller.signal });
         clearTimeout(timeoutId);
 
         if (res.ok) {
           const json = await res.json();
-          const rawResults = json.data?.results || (Array.isArray(json.data) ? json.data : []);
+          const rawResults = json.results || json.data?.results || (Array.isArray(json.data) ? json.data : []);
           if (rawResults.length > 0) {
             const parsed = rawResults.slice(0, 15).map(item => {
-              let audioUrl = '';
-              if (Array.isArray(item.downloadUrl) && item.downloadUrl.length > 0) {
+              // Extract audio stream (vlink, media_preview_url, or downloadUrl array)
+              let audioUrl = item.more_info?.vlink || item.media_preview_url || '';
+              if (!audioUrl && Array.isArray(item.downloadUrl) && item.downloadUrl.length > 0) {
                 const best = item.downloadUrl.find(d => d.quality === '320kbps' || d.quality === '160kbps') || item.downloadUrl[item.downloadUrl.length - 1];
                 audioUrl = best?.url || best?.link || '';
-              } else if (typeof item.downloadUrl === 'string') {
+              } else if (!audioUrl && typeof item.downloadUrl === 'string') {
                 audioUrl = item.downloadUrl;
               }
 
+              // Extract crisp album art
               let artUrl = null;
-              if (Array.isArray(item.image) && item.image.length > 0) {
+              if (typeof item.image === 'string') {
+                artUrl = item.image.replace('150x150', '500x500');
+              } else if (Array.isArray(item.image) && item.image.length > 0) {
                 const bestArt = item.image.find(i => i.quality === '500x500' || i.quality === '150x150') || item.image[item.image.length - 1];
                 artUrl = bestArt?.url || bestArt?.link || null;
               }
 
+              // Clean title & artist strings
+              const rawTitle = item.title || item.song || item.name || 'Untitled Track';
+              const cleanTitle = rawTitle.replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, '&').replace(/<[^>]+>/g, '').trim();
+
+              let rawArtist = item.primary_artists || item.more_info?.music || item.subtitle || item.artist || 'Unknown Artist';
+              if (rawArtist.includes(' - ')) {
+                rawArtist = rawArtist.split(' - ')[0];
+              }
+              const cleanArtist = rawArtist.replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, '&').replace(/<[^>]+>/g, '').trim();
+
               return {
-                id: item.id || `saavn-${Math.random().toString(36).substr(2, 6)}`,
-                name: (item.name || item.title || 'Untitled Track').replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, '&'),
-                artist: (item.primaryArtists || item.singers || item.artist || 'Unknown Artist').replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, '&'),
+                id: item.id ? `saavn-${item.id}` : `saavn-${Math.random().toString(36).substr(2, 6)}`,
+                name: cleanTitle,
+                artist: cleanArtist,
                 url: audioUrl,
                 art: artUrl,
                 source: 'jiosaavn'
