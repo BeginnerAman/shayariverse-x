@@ -1325,6 +1325,8 @@ textarea,
   display: flex;
   flex-direction: column;
   gap: 10px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 .svx-category-block {
@@ -1350,18 +1352,22 @@ textarea,
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(18, 18, 30, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: var(--svx-glass-radius);
   padding: 10px 12px;
-  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  content-visibility: auto;
+  contain-intrinsic-size: 0 66px;
+  contain: layout style paint;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .svx-track-card:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(26, 26, 42, 0.85);
 }
 
 .svx-track-thumbnail {

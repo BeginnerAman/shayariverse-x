@@ -123,6 +123,7 @@ let globalAuthModal = null;
 /* 3. Feed Card Renderer Engine */
 export function createFeedCardElement(shayari) {
   const card = document.createElement('article');
+  card._shayari = shayari;
   card.className = `svx-glass-card svx-feed-card mood-${shayari.mood_theme || 'purple'}`;
   card.setAttribute('data-mood', shayari.mood_theme || 'purple');
   card.setAttribute('data-shayari-id', shayari.id);
@@ -478,12 +479,16 @@ export class SVXFeedController {
           showToast("Shayari post deleted.", "Trash2");
         }
       } else if (action === 'share' && shayariId) {
+        const card = target.closest('.svx-feed-card');
+        const targetShayari = card?._shayari || {
+          id: shayariId,
+          content: card?.querySelector('.svx-shayari-text')?.textContent || '',
+          author_name: card?.querySelector('.svx-author-name')?.textContent || 'Aman',
+          author_handle: card?.querySelector('.svx-author-handle')?.textContent?.replace(/^@/, '') || 'aman',
+          song_name: card?.querySelector('.svx-song-title')?.textContent || ''
+        };
         if (this.shareEngine) {
-          const shayaris = await db.getFeed(1, 100);
-          const targetShayari = shayaris.find(s => s.id === shayariId);
-          if (targetShayari) {
-            this.shareEngine.shareCard(targetShayari);
-          }
+          this.shareEngine.shareCard(targetShayari);
         }
       } else if (action === 'view-profile') {
         const handle = target.closest('[data-action="view-profile"]')?.getAttribute('data-handle');
@@ -1355,113 +1360,59 @@ export class SVXEditProfileModal {
   }
 }
 
-/* 9. HD Status Image Share Engine via html2canvas (Phase 6) */
+/* 9. Instant Native Share Engine (Phase 6) */
 export class SVXShareEngine {
   constructor() {
     this.stage = document.getElementById('svx-share-stage');
-    this.cardEl = document.getElementById('svx-share-render-card');
-    this.avatarEl = document.getElementById('svx-share-author-avatar');
-    this.nameEl = document.getElementById('svx-share-author-name');
-    this.badgeEl = document.getElementById('svx-share-verified-badge');
-    this.handleEl = document.getElementById('svx-share-author-handle');
-    this.textEl = document.getElementById('svx-share-text');
-    this.audioPillEl = document.getElementById('svx-share-audio-pill');
-    this.songTitleEl = document.getElementById('svx-share-song-title');
-    this.songArtistEl = document.getElementById('svx-share-song-artist');
-    this.watermarkSongEl = document.getElementById('svx-watermark-song-name');
   }
 
   async shareCard(shayari) {
-    if (!this.cardEl || !shayari) return;
+    if (!shayari) return;
 
-    showToast("Preparing HD Status Card...", "Sparkles");
+    const content = (shayari.formatted || shayari.content || '').trim();
+    const authorName = shayari.author_name || 'Aman';
+    const authorHandle = shayari.author_handle ? `@${shayari.author_handle.replace(/^@/, '')}` : '@aman';
+    const songName = shayari.song_name ? `\n🎵 BGM: ${shayari.song_name}` : '';
+    const repoLink = CONFIG.REPO_URL ? `\n✨ ShayariVerse X • ${CONFIG.REPO_URL}` : '\n✨ Shared via ShayariVerse X';
 
-    // Populate render template
-    this.cardEl.className = `svx-share-render-card mood-${shayari.mood_theme || 'purple'}`;
-    const initials = (shayari.author_name || 'SV').slice(0, 2).toUpperCase();
-    if (this.avatarEl) this.avatarEl.textContent = initials;
-    if (this.nameEl) this.nameEl.textContent = shayari.author_name || 'Shayar';
-    if (this.handleEl) this.handleEl.textContent = `@${shayari.author_handle || 'shayar'}`;
+    const shareText = `"${content}"\n\n— ${authorName} (${authorHandle})${songName}\n${repoLink}`;
 
-    if (this.badgeEl) {
-      this.badgeEl.innerHTML = shayari.is_verified ? renderIcon('BadgeCheck') : '';
-      this.badgeEl.style.display = shayari.is_verified ? 'inline-flex' : 'none';
+    // 1. Instant Native Web Share (WhatsApp, Instagram, Telegram, SMS, etc.)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'ShayariVerse X',
+          text: shareText
+        });
+        showToast("Shared successfully!", "Check");
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return; // User closed the native share drawer
+        console.warn('[SVX Share] Native share error, falling back to clipboard:', err);
+      }
     }
 
-    if (this.textEl) {
-      const sizeClass = getAutoFitClass(shayari.formatted || shayari.content);
-      this.textEl.className = `svx-shayari-text font-${shayari.font_style || 'nastaliq'} ${sizeClass}`;
-      this.textEl.textContent = shayari.formatted || shayari.content;
-    }
-
-    if (shayari.song_url && shayari.song_name) {
-      if (this.audioPillEl) this.audioPillEl.style.display = 'flex';
-      if (this.songTitleEl) this.songTitleEl.textContent = shayari.song_name;
-      if (this.songArtistEl) this.songArtistEl.textContent = shayari.song_artist || 'Viral Audio';
-      if (this.watermarkSongEl) this.watermarkSongEl.textContent = shayari.song_name;
-    } else {
-      if (this.audioPillEl) this.audioPillEl.style.display = 'none';
-      if (this.watermarkSongEl) this.watermarkSongEl.textContent = 'Poetic Soul';
-    }
-
+    // 2. Direct Clipboard Fallback
     try {
-      if (typeof window.html2canvas !== 'function') {
-        throw new Error("html2canvas library is not loaded.");
-      }
-
-      const canvas = await window.html2canvas(this.cardEl, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#07070d',
-        logging: false
-      });
-
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          showToast("Could not generate image.", "AlertTriangle");
-          return;
-        }
-
-        const filename = `shayariverse-x-${Date.now()}.png`;
-        const file = new File([blob], filename, { type: 'image/png' });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              title: 'ShayariVerse X',
-              text: `"${shayari.formatted || shayari.content}"\n— @${shayari.author_handle} on ShayariVerse X`,
-              files: [file]
-            });
-            showToast("Shared to Status!", "Check");
-            return;
-          } catch (shareErr) {
-            if (shareErr.name === 'AbortError') return;
-            console.warn('[SVX Share] Web Share API failed, falling back to download:', shareErr);
-          }
-        }
-
-        // Direct Download fallback
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        showToast("HD Status Card downloaded!", "Check");
-      }, 'image/png');
-
-    } catch (err) {
-      console.error('[SVX Share] Export failed:', err);
-      // Fallback: share text
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: 'ShayariVerse X',
-            text: `"${shayari.formatted || shayari.content}"\n— @${shayari.author_handle} on ShayariVerse X (${CONFIG.REPO_URL})`
-          });
-          showToast("Shared as text!", "Check");
-        } catch {}
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        showToast("Shayari copied to clipboard!", "Check");
       } else {
-        showToast("Export failed. Please retry.", "AlertTriangle");
+        const textarea = document.createElement('textarea');
+        textarea.value = shareText;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast("Shayari copied to clipboard!", "Check");
       }
+    } catch (clipErr) {
+      console.error('[SVX Share] Clipboard fallback failed:', clipErr);
+      showToast("Could not share Shayari.", "AlertTriangle");
     }
   }
 }
@@ -1773,12 +1724,16 @@ export class SVXProfileController {
       } else if (action === 'comment' && shayariId) {
         this.commentModal?.open(shayariId);
       } else if (action === 'share' && shayariId) {
+        const card = target.closest('.svx-feed-card');
+        const targetShayari = card?._shayari || {
+          id: shayariId,
+          content: card?.querySelector('.svx-shayari-text')?.textContent || '',
+          author_name: card?.querySelector('.svx-author-name')?.textContent || 'Aman',
+          author_handle: card?.querySelector('.svx-author-handle')?.textContent?.replace(/^@/, '') || 'aman',
+          song_name: card?.querySelector('.svx-song-title')?.textContent || ''
+        };
         if (this.shareEngine) {
-          const shayaris = await db.getFeed(1, 100);
-          const targetShayari = shayaris.find(s => s.id === shayariId);
-          if (targetShayari) {
-            this.shareEngine.shareCard(targetShayari);
-          }
+          this.shareEngine.shareCard(targetShayari);
         }
       } else if (action === 'edit-shayari' && shayariId) {
         if (this.composerModal) {
