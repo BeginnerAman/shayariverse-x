@@ -247,19 +247,20 @@ textarea,
 
 /* 5. Liquid Glass Card Engine */
 .svx-glass-card {
-  background: var(--svx-glass-bg);
-  backdrop-filter: blur(var(--svx-glass-blur));
-  -webkit-backdrop-filter: blur(var(--svx-glass-blur));
+  background: rgba(18, 18, 30, 0.78);
   border: 1px solid var(--svx-glass-border);
   border-radius: var(--svx-glass-radius);
-  box-shadow: var(--svx-glass-shadow), var(--svx-glass-highlight);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   padding: 20px;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
-  will-change: transform;
-  transform: translateZ(0);
   contain: layout style paint;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.svx-glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 /* Performance optimization for offscreen cards */
@@ -283,44 +284,38 @@ textarea,
 /* Mood Glow Variants */
 .svx-glass-card[data-mood="purple"],
 .svx-glass-card.mood-purple {
-  border-color: rgba(138, 43, 226, 0.38);
-  box-shadow: var(--svx-glass-shadow), var(--svx-glass-highlight),
-              0 0 24px rgba(138, 43, 226, 0.16);
+  border-color: rgba(138, 43, 226, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 16px rgba(138, 43, 226, 0.15);
 }
 
 .svx-glass-card[data-mood="cyan"],
 .svx-glass-card.mood-cyan {
-  border-color: rgba(0, 210, 255, 0.38);
-  box-shadow: var(--svx-glass-shadow), var(--svx-glass-highlight),
-              0 0 24px rgba(0, 210, 255, 0.16);
+  border-color: rgba(0, 210, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 16px rgba(0, 210, 255, 0.15);
 }
 
 .svx-glass-card[data-mood="rose"],
 .svx-glass-card.mood-rose {
-  border-color: rgba(255, 64, 129, 0.38);
-  box-shadow: var(--svx-glass-shadow), var(--svx-glass-highlight),
-              0 0 24px rgba(255, 64, 129, 0.16);
+  border-color: rgba(255, 64, 129, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 16px rgba(255, 64, 129, 0.15);
 }
 
 .svx-glass-card[data-mood="amber"],
 .svx-glass-card.mood-amber {
-  border-color: rgba(255, 193, 68, 0.38);
-  box-shadow: var(--svx-glass-shadow), var(--svx-glass-highlight),
-              0 0 24px rgba(255, 193, 68, 0.16);
+  border-color: rgba(255, 193, 68, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 16px rgba(255, 193, 68, 0.15);
 }
 
 .svx-glass-card[data-mood="emerald"],
 .svx-glass-card.mood-emerald {
-  border-color: rgba(5, 255, 161, 0.38);
-  box-shadow: var(--svx-glass-shadow), var(--svx-glass-highlight),
-              0 0 24px rgba(5, 255, 161, 0.16);
+  border-color: rgba(5, 255, 161, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 16px rgba(5, 255, 161, 0.15);
 }
 
 .svx-glass-card[data-mood="obsidian"],
 .svx-glass-card.mood-obsidian {
-  border-color: rgba(148, 163, 184, 0.38);
-  box-shadow: var(--svx-glass-shadow), var(--svx-glass-highlight),
-              0 0 24px rgba(148, 163, 184, 0.16);
+  border-color: rgba(148, 163, 184, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 16px rgba(148, 163, 184, 0.15);
 }
 
 /* 6. Strict Lucide SVG Icon Styles (Zero Emoji Rule) */
@@ -890,23 +885,22 @@ textarea,
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 0px)) 16px;
+  overflow: hidden;
+  padding: 0 16px;
 }
 
 .svx-modal-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: rgba(14, 14, 24, 0.96);
+  flex-shrink: 0;
+  background: rgba(14, 14, 24, 0.98);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0 14px 0;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 0 14px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 16px;
+  margin-bottom: 0;
+  z-index: 50;
 }
 
 .svx-modal-title {
@@ -959,9 +953,14 @@ textarea,
 
 /* Composer Form Controls */
 .svx-composer-form {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 16px 0 calc(28px + env(safe-area-inset-bottom, 0px)) 0;
 }
 
 .svx-composer-textarea-wrap {
@@ -1278,9 +1277,7 @@ textarea,
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--svx-glass-bg);
-  backdrop-filter: blur(var(--svx-glass-blur));
-  -webkit-backdrop-filter: blur(var(--svx-glass-blur));
+  background: rgba(18, 18, 30, 0.85);
   border: 1px solid var(--svx-glass-border);
   border-radius: var(--svx-glass-radius-pill);
   padding: 6px 14px;
@@ -1305,6 +1302,15 @@ textarea,
   font-family: var(--svx-font-primary);
   font-size: 14px;
   min-height: 32px;
+}
+
+.svx-search-input::-webkit-search-cancel-button,
+.svx-search-input::-webkit-search-decoration,
+.svx-search-input::-webkit-search-results-button,
+.svx-search-input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none !important;
 }
 
 .svx-search-input::placeholder {
