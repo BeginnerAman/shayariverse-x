@@ -37,7 +37,9 @@ export const ICONS = {
   Clock: `<svg class="svx-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
   Play: `<svg class="svx-icon" viewBox="0 0 24 24" style="fill: currentColor;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
   Pause: `<svg class="svx-icon" viewBox="0 0 24 24" style="fill: currentColor;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`,
-  Send: `<svg class="svx-icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`
+  Send: `<svg class="svx-icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
+  Loader2: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
+  AlertCircle: `<svg class="svx-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
 };
 
 /**
@@ -98,6 +100,9 @@ export function showToast(message, iconName = 'Sparkles', duration = 3000) {
   if (typeof document === 'undefined') return;
   const container = document.getElementById('svx-toast-container');
   if (!container) return;
+
+  // Single-toast policy: clear any existing toasts immediately to prevent stacking
+  container.innerHTML = '';
 
   const toast = document.createElement('div');
   toast.className = 'svx-toast';
@@ -1195,7 +1200,21 @@ export class SVXDialog {
 
 /* 7c. In-App Update Checker (Option A) */
 export class SVXUpdateChecker {
+  static isChecking = false;
+
   static async checkForUpdates(isManual = false) {
+    if (this.isChecking) return;
+    this.isChecking = true;
+
+    const checkBtn = document.getElementById('svx-profile-check-update-btn');
+    const originalContent = checkBtn ? checkBtn.innerHTML : null;
+
+    if (isManual && checkBtn) {
+      checkBtn.style.pointerEvents = 'none';
+      checkBtn.style.opacity = '0.5';
+      checkBtn.innerHTML = `${renderIcon('Loader2', 'svx-icon-sm svx-spin')}<span>Checking...</span>`;
+    }
+
     try {
       const res = await fetch('https://api.github.com/repos/BeginnerAman/shayariverse-x/releases/latest', {
         headers: { 'Accept': 'application/vnd.github.v3+json' }
@@ -1231,6 +1250,13 @@ export class SVXUpdateChecker {
       console.warn('[SVX Update] Check error:', err);
       if (isManual) {
         showToast("Unable to check for updates right now.", "AlertCircle");
+      }
+    } finally {
+      this.isChecking = false;
+      if (isManual && checkBtn && originalContent) {
+        checkBtn.style.pointerEvents = '';
+        checkBtn.style.opacity = '';
+        checkBtn.innerHTML = originalContent;
       }
     }
   }

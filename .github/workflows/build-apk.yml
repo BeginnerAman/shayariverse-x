@@ -51,27 +51,24 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p build-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.0.2.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.0.3.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShayariVerse-X-v1.0.2-APK
-          path: build-artifacts/ShayariVerse-X-v1.0.2.apk
+          name: ShayariVerse-X-v1.0.3-APK
+          path: build-artifacts/ShayariVerse-X-v1.0.3.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.0.2
+      - name: Publish GitHub Release v1.0.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.0.2 --yes || true
-          gh release create v1.0.2 build-artifacts/ShayariVerse-X-v1.0.2.apk \
-            --title "ShayariVerse X v1.0.2" \
-            --notes "### ShayariVerse X v1.0.2 Release Notes
-          - **In-App Update Alert**: Integrated automatic background & manual check for new releases with 1-tap direct update prompt.
-          - **Tablet & Large Screen Ergonomics**: Responsive layout (680px width), centered floating dock bottom navigation, and floating dialog modals for iPad & Android Tablets.
-          - **No Dev Placeholder Text**: Removed initial 'Phase 1 Core Shell Loaded' text permanently; displays fresh canvas immediately.
-          - **Poetic Bio UI Perfected**: Dedicated 16px rounded card alignment eliminates capsule squeeze distortion & resize grip.
-          - **Post Delete Empty-State Fix**: Real-time re-render of 'A Fresh Canvas Awaits' prevents black screen when deleting the last post.
-          - **Single-Line Toast Alignment**: Horizontally centered, non-wrapping glowing pill toast notifications.
-          - **Polished Bottom Nav Glow**: Softer 32px ambient neon bar with micro-bounce tab physics."
+          gh release delete v1.0.3 --yes || true
+          gh release create v1.0.3 build-artifacts/ShayariVerse-X-v1.0.3.apk \
+            --title "ShayariVerse X v1.0.3" \
+            --notes "### ShayariVerse X v1.0.3 Release Notes
+          - **Single-Toast Policy & Debounced Update Check**: Tapping 'Check for Updates' repeatedly no longer stacks toasts; previous toasts are cleared immediately with button debouncing & animated spinner feedback.
+          - **Minimal & Clean Bottom Navigation**: Removed horizontal neon indicator bar line entirely for a sleek, distraction-free aesthetic with glowing cyan active icons.
+          - **Compact Circular Mood Swatches**: Replaced cut-off text pills with 6 luminous circular color spheres (Cyber Purple, Midnight Cyan, Crimson Rose, Golden Amber, Emerald Mint, Obsidian Noir) that fit all screen widths with zero clipping.
+          - **Symmetric Segmented Typography**: Replaced uneven font pills with a 3-column equal-width glass grid (Nastaliq, Elegant, Modern) for balanced alignment on mobile and tablet."

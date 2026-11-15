@@ -27,6 +27,8 @@
   --svx-accent-cyan: #00d2ff;
   --svx-accent-rose: #ff4081;
   --svx-accent-amber: #ffc144;
+  --svx-accent-emerald: #05ffa1;
+  --svx-accent-obsidian: #94a3b8;
 
   /* Typography Colors */
   --svx-text-primary: rgba(255, 255, 255, 0.95);
@@ -319,6 +321,20 @@ html, body {
               0 0 24px rgba(255, 193, 68, 0.16);
 }
 
+.svx-glass-card[data-mood="emerald"],
+.svx-glass-card.mood-emerald {
+  border-color: rgba(5, 255, 161, 0.38);
+  box-shadow: var(--svx-glass-shadow), var(--svx-glass-highlight),
+              0 0 24px rgba(5, 255, 161, 0.16);
+}
+
+.svx-glass-card[data-mood="obsidian"],
+.svx-glass-card.mood-obsidian {
+  border-color: rgba(148, 163, 184, 0.38);
+  box-shadow: var(--svx-glass-shadow), var(--svx-glass-highlight),
+              0 0 24px rgba(148, 163, 184, 0.16);
+}
+
 /* 6. Strict Lucide SVG Icon Styles (Zero Emoji Rule) */
 .svx-icon {
   width: 20px;
@@ -415,32 +431,15 @@ html, body {
 }
 
 .svx-nav-item.active {
-  color: var(--svx-text-primary);
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .svx-nav-item.active .svx-icon {
   color: var(--svx-accent-cyan);
-  filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.75));
-  transform: translateY(-2px) scale(1.06);
+  filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.85));
+  transform: translateY(-2px) scale(1.08);
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), filter 0.22s ease;
-}
-
-/* Modern Top Ambient Indicator Bar */
-.svx-nav-item.active::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  width: 32px;
-  height: 3.5px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, var(--svx-accent-cyan), var(--svx-accent-purple));
-  box-shadow: 0 0 12px rgba(0, 210, 255, 0.85), 0 2px 8px rgba(138, 43, 226, 0.6);
-  animation: svx-nav-accent-glow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes svx-nav-accent-glow {
-  0% { transform: scaleX(0); opacity: 0; }
-  100% { transform: scaleX(1); opacity: 1; }
 }
 
 /* Elevated + Create Button */
@@ -699,6 +698,10 @@ html, body {
 @keyframes svx-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.svx-spin {
+  animation: svx-spin 0.85s linear infinite !important;
 }
 
 .svx-audio-info {
@@ -1059,67 +1062,129 @@ html, body {
   padding-bottom: 4px;
 }
 
-.svx-mood-pill {
-  padding: 7px 14px;
-  border-radius: var(--svx-glass-radius-pill);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--svx-text-secondary);
-  font-family: var(--svx-font-primary);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
+/* Circular Mood Swatches */
+.svx-mood-swatches-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  outline: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 2px;
 }
 
-.svx-mood-pill:active {
-  transform: scale(0.95);
-}
-
-.svx-mood-dot {
-  width: 10px;
-  height: 10px;
+.svx-mood-swatch {
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+  flex-shrink: 0;
 }
 
-.svx-mood-dot.purple { background: var(--svx-accent-purple); box-shadow: 0 0 6px var(--svx-accent-purple); }
-.svx-mood-dot.cyan   { background: var(--svx-accent-cyan);   box-shadow: 0 0 6px var(--svx-accent-cyan); }
-.svx-mood-dot.rose   { background: var(--svx-accent-rose);   box-shadow: 0 0 6px var(--svx-accent-rose); }
-.svx-mood-dot.amber  { background: var(--svx-accent-amber);  box-shadow: 0 0 6px var(--svx-accent-amber); }
+.svx-mood-swatch:active {
+  transform: scale(0.92);
+}
 
-.svx-mood-pill.active {
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--svx-text-primary);
+.svx-mood-swatch-inner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.svx-mood-swatch-inner.purple   { background: radial-gradient(circle at 35% 35%, #c084fc, #8a2be2 60%, #4a0e80); box-shadow: inset 0 1px 2px rgba(255,255,255,0.4); }
+.svx-mood-swatch-inner.cyan     { background: radial-gradient(circle at 35% 35%, #67e8f9, #00d2ff 60%, #006699); box-shadow: inset 0 1px 2px rgba(255,255,255,0.4); }
+.svx-mood-swatch-inner.rose     { background: radial-gradient(circle at 35% 35%, #fda4af, #ff4081 60%, #990033); box-shadow: inset 0 1px 2px rgba(255,255,255,0.4); }
+.svx-mood-swatch-inner.amber    { background: radial-gradient(circle at 35% 35%, #fde68a, #ffc144 60%, #b27b00); box-shadow: inset 0 1px 2px rgba(255,255,255,0.4); }
+.svx-mood-swatch-inner.emerald  { background: radial-gradient(circle at 35% 35%, #a7f3d0, #05ffa1 60%, #065f46); box-shadow: inset 0 1px 2px rgba(255,255,255,0.4); }
+.svx-mood-swatch-inner.obsidian { background: radial-gradient(circle at 35% 35%, #f1f5f9, #94a3b8 60%, #1e293b); box-shadow: inset 0 1px 2px rgba(255,255,255,0.4); }
+
+.svx-mood-swatch.active {
+  transform: scale(1.1);
+  border-color: #ffffff;
+}
+
+.svx-mood-swatch[data-composer-mood="purple"].active {
+  border-color: #c084fc;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.7);
+}
+
+.svx-mood-swatch[data-composer-mood="cyan"].active {
+  border-color: #38bdf8;
+  box-shadow: 0 0 14px rgba(0, 210, 255, 0.7);
+}
+
+.svx-mood-swatch[data-composer-mood="rose"].active {
+  border-color: #fb7185;
+  box-shadow: 0 0 14px rgba(255, 64, 129, 0.7);
+}
+
+.svx-mood-swatch[data-composer-mood="amber"].active {
+  border-color: #fcd34d;
+  box-shadow: 0 0 14px rgba(255, 193, 68, 0.7);
+}
+
+.svx-mood-swatch[data-composer-mood="emerald"].active {
+  border-color: #6ee7b7;
+  box-shadow: 0 0 14px rgba(5, 255, 161, 0.7);
+}
+
+.svx-mood-swatch[data-composer-mood="obsidian"].active {
+  border-color: #e2e8f0;
+  box-shadow: 0 0 14px rgba(203, 213, 225, 0.7);
+}
+
+/* Typography Segmented Grid */
+.svx-font-segmented-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px;
+  border-radius: var(--svx-glass-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .svx-font-pill {
-  padding: 7px 16px;
-  border-radius: var(--svx-glass-radius-pill);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  padding: 9px 6px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--svx-text-secondary);
   font-family: var(--svx-font-primary);
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
   outline: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  text-align: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.svx-font-pill.font-nastaliq { font-family: var(--svx-font-poetic); font-size: 14px; }
-.svx-font-pill.font-elegant  { font-family: var(--svx-font-display); font-style: italic; }
-.svx-font-pill.font-clean    { font-family: var(--svx-font-primary); }
+.svx-font-pill:active {
+  transform: scale(0.96);
+}
+
+.svx-font-pill.font-nastaliq { font-family: var(--svx-font-poetic); font-size: 15px; }
+.svx-font-pill.font-elegant  { font-family: var(--svx-font-display); font-style: italic; font-size: 14.5px; }
+.svx-font-pill.font-clean    { font-family: var(--svx-font-primary); font-size: 13px; }
 
 .svx-font-pill.active {
-  border-color: var(--svx-accent-cyan);
+  border-color: rgba(0, 210, 255, 0.5);
   background: rgba(0, 210, 255, 0.12);
   color: #ffffff;
-  box-shadow: 0 0 10px rgba(0, 210, 255, 0.25);
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.25);
+  font-weight: 600;
 }
 
 /* Live Preview Section */
