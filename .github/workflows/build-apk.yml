@@ -56,25 +56,25 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p build-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.0.9.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.1.0.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-Latest.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShayariVerse-X-v1.0.9-APK
-          path: build-artifacts/ShayariVerse-X-v1.0.9.apk
+          name: ShayariVerse-X-v1.1.0-APK
+          path: build-artifacts/ShayariVerse-X-v1.1.0.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.0.9
+      - name: Publish GitHub Release v1.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.0.9 --yes || true
-          gh release create v1.0.9 build-artifacts/ShayariVerse-X-v1.0.9.apk build-artifacts/ShayariVerse-X-Latest.apk \
-            --title "ShayariVerse X v1.0.9" \
-            --notes "### ShayariVerse X v1.0.9 Release Notes
-          - **Official Direct JioSaavn Engine**: Restored live Indian & Bollywood music search via JioSaavn official engine with native CapacitorHttp support for unthrottled audio previews.
-          - **Total Zero-Heat GPU Optimization**: 100% purged all remaining backdrop-filter blur passes across top bar, bottom nav, and audio pills, slashing GPU draw calls to baseline idle and eliminating device heating.
-          - **0ms Optimistic UI Engine**: Post creation, heart likes, comments, and couplet editing reflect immediately in 0ms with in-place DOM mutation, eliminating full-page reloads and flicker.
-          - **Professional Offline Mode & Auto-Reconnect**: Persistent local caching ensures feed and profile never display blank states or 0 posts when offline, paired with a sleek offline pill and instant auto-sync when internet reconnects."
+          gh release delete v1.1.0 --yes || true
+          gh release create v1.1.0 build-artifacts/ShayariVerse-X-v1.1.0.apk build-artifacts/ShayariVerse-X-Latest.apk \
+            --title "ShayariVerse X v1.1.0" \
+            --notes "### ShayariVerse X v1.1.0 Release Notes
+          - **Instant In-Place Couplet Editing**: Fixed DOM auto-fit sizing reference so edited couplets reflect instantly on screen in 0ms without requiring an app restart.
+          - **Zero-Flicker Synchronous Feed Startup**: Purged static empty placeholder cards from the initial HTML stream; feed loads cached couplets in 0ms on startup for a seamless experience.
+          - **Bidirectional Cross-Tab Like Synchronization**: Synchronized heart likes and counts across Feed and Profile views simultaneously, ensuring accurate glow states and preventing accidental unlikes.
+          - **Featherweight GPU Tuning & content-visibility Engine**: Added content-visibility layout containment for offscreen cards and eliminated paused equalizer compositor layers for zero-heat performance."

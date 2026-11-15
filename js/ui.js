@@ -256,6 +256,19 @@ export function createFeedCardElement(shayari) {
 }
 
 /**
+ * Global 0ms Like State Synchronizer
+ * Synchronizes heart glow and count simultaneously across Feed and Profile tabs
+ */
+export function syncLikeStateInDOM(shayariId, isLiked, count) {
+  if (!shayariId) return;
+  const matchingButtons = document.querySelectorAll(`.svx-feed-card[data-shayari-id="${shayariId}"] [data-action="like"]`);
+  matchingButtons.forEach(btn => {
+    btn.classList.toggle('liked', isLiked);
+    btn.innerHTML = `${renderIcon(isLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${count}</span>`;
+  });
+}
+
+/**
  * Triggers SVG heart burst overlay animation and marks post as liked
  */
 export async function triggerHeartBurst(cardElement, shayariId) {
@@ -273,18 +286,16 @@ export async function triggerHeartBurst(cardElement, shayariId) {
   const wasLiked = likeBtn?.classList.contains('liked');
 
   // Optimistic 0ms update if not already liked
-  if (!wasLiked && likeBtn && countSpan) {
+  if (!wasLiked && countSpan) {
     const currentCount = parseInt(countSpan.textContent || '0', 10);
-    likeBtn.classList.add('liked');
-    likeBtn.innerHTML = `${renderIcon('HeartFilled')}<span class="svx-like-count">${currentCount + 1}</span>`;
+    syncLikeStateInDOM(shayariId, true, currentCount + 1);
   }
 
   const executeLike = async (user) => {
     try {
       const result = await db.toggleLike(user.id, shayariId);
-      if (likeBtn) {
-        likeBtn.classList.toggle('liked', result.liked);
-        likeBtn.innerHTML = `${renderIcon(result.liked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${result.newCount}</span>`;
+      if (result && typeof result.newCount === 'number') {
+        syncLikeStateInDOM(shayariId, result.liked, result.newCount);
       }
     } catch (err) {
       console.warn('[SVX] Like error:', err);
@@ -350,15 +361,52 @@ export class SVXFeedController {
     });
   }
 
+  renderFeedItems(shayaris) {
+    if (!shayaris || !Array.isArray(shayaris) || shayaris.length === 0) return false;
+    let listWrapper = this.container.querySelector('.svx-feed-list');
+    if (!listWrapper) {
+      this.container.innerHTML = '';
+      listWrapper = document.createElement('div');
+      listWrapper.className = 'svx-feed-list';
+      this.container.appendChild(listWrapper);
+    } else {
+      listWrapper.innerHTML = '';
+    }
+
+    shayaris.forEach(s => {
+      const card = createFeedCardElement(s);
+      listWrapper.appendChild(card);
+      this.intersectionObserver?.observe(card);
+    });
+
+    this.bindCardEvents(listWrapper);
+    return true;
+  }
+
   async loadFeed() {
     if (this.loading) return;
     this.loading = true;
 
+    // 0ms Instant startup render from offline cache (zero flash)
+    if (this.page === 1) {
+      try {
+        const cached = db.local?.getCachedFeed();
+        if (cached && cached.length > 0 && !this.container.querySelector('.svx-feed-list')) {
+          this.renderFeedItems(cached);
+        }
+      } catch (cacheErr) {
+        console.warn('[SVX Feed] Startup cache read error:', cacheErr);
+      }
+    }
+
     try {
       const shayaris = await db.getFeed(this.page, CONFIG.FEED_PAGE_SIZE);
-      this.container.innerHTML = '';
 
       if (!shayaris || shayaris.length === 0) {
+        if (this.container.querySelector('.svx-feed-list')?.children.length > 0) {
+          return;
+        }
+
         const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
         this.container.innerHTML = `
           <div class="svx-glass-card mood-purple" style="text-align: center; padding: 48px 20px; margin-top: 16px;">
@@ -400,17 +448,7 @@ export class SVXFeedController {
         return;
       }
 
-      const listWrapper = document.createElement('div');
-      listWrapper.className = 'svx-feed-list';
-
-      shayaris.forEach(s => {
-        const card = createFeedCardElement(s);
-        listWrapper.appendChild(card);
-        this.intersectionObserver?.observe(card);
-      });
-
-      this.container.appendChild(listWrapper);
-      this.bindCardEvents(listWrapper);
+      this.renderFeedItems(shayaris);
       console.log(`[SVX] Loaded ${shayaris.length} cards into feed`);
     } catch (err) {
       console.error('[SVX] Failed to load feed:', err);
@@ -461,20 +499,17 @@ export class SVXFeedController {
           const nextLiked = !isCurrentlyLiked;
           const nextCount = Math.max(0, currentCount + (nextLiked ? 1 : -1));
 
-          // 0ms Optimistic UI update
-          target.classList.toggle('liked', nextLiked);
-          target.innerHTML = `${renderIcon(nextLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${nextCount}</span>`;
+          // 0ms Optimistic UI update across both Feed and Profile
+          syncLikeStateInDOM(shayariId, nextLiked, nextCount);
 
           try {
             const result = await db.toggleLike(user.id, shayariId);
             if (result && typeof result.newCount === 'number') {
-              const liveSpan = target.querySelector('.svx-like-count');
-              if (liveSpan) liveSpan.textContent = result.newCount;
+              syncLikeStateInDOM(shayariId, result.liked, result.newCount);
             }
           } catch (err) {
             console.warn('[SVX] Like failed, reverting optimistic state:', err);
-            target.classList.toggle('liked', isCurrentlyLiked);
-            target.innerHTML = `${renderIcon(isCurrentlyLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${currentCount}</span>`;
+            syncLikeStateInDOM(shayariId, isCurrentlyLiked, currentCount);
             showToast('Could not update like. Check connection.', 'AlertTriangle');
           }
         };
@@ -1822,20 +1857,17 @@ export class SVXProfileController {
           const nextLiked = !isCurrentlyLiked;
           const nextCount = Math.max(0, currentCount + (nextLiked ? 1 : -1));
 
-          // 0ms Optimistic UI update
-          target.classList.toggle('liked', nextLiked);
-          target.innerHTML = `${renderIcon(nextLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${nextCount}</span>`;
+          // 0ms Optimistic UI update across both Feed and Profile
+          syncLikeStateInDOM(shayariId, nextLiked, nextCount);
 
           try {
             const result = await db.toggleLike(user.id, shayariId);
             if (result && typeof result.newCount === 'number') {
-              const liveSpan = target.querySelector('.svx-like-count');
-              if (liveSpan) liveSpan.textContent = result.newCount;
+              syncLikeStateInDOM(shayariId, result.liked, result.newCount);
             }
           } catch (err) {
             console.warn('[SVX Profile] Like failed, reverting optimistic state:', err);
-            target.classList.toggle('liked', isCurrentlyLiked);
-            target.innerHTML = `${renderIcon(isCurrentlyLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${currentCount}</span>`;
+            syncLikeStateInDOM(shayariId, isCurrentlyLiked, currentCount);
             showToast('Could not update like. Check connection.', 'AlertTriangle');
           }
         };
@@ -2019,60 +2051,65 @@ export class SVXRouter {
  */
 export function updateShayariInDOM(shayari) {
   if (!shayari || !shayari.id) return;
-  const cards = document.querySelectorAll(`.svx-feed-card[data-shayari-id="${shayari.id}"]`);
-  cards.forEach(card => {
-    // 1. Text & typography
-    const textEl = card.querySelector('.svx-shayari-text');
-    if (textEl) {
-      textEl.textContent = shayari.formatted || shayari.content;
-      const fit = calculateAutoFit(shayari.content || '');
-      textEl.className = `svx-shayari-text font-${shayari.font_style || 'nastaliq'} ${fit.className}`;
-    }
-
-    // 2. Mood theme
-    if (shayari.mood_theme) {
-      card.setAttribute('data-mood', shayari.mood_theme);
-      card.className = `svx-glass-card svx-feed-card mood-${shayari.mood_theme}`;
-    }
-
-    // 3. Audio Pill
-    let pill = card.querySelector('.svx-audio-pill');
-    if (shayari.song_url) {
-      if (!pill) {
-        pill = document.createElement('div');
-        pill.className = 'svx-audio-pill';
-        const cardBody = card.querySelector('.svx-card-body');
-        if (cardBody && cardBody.nextSibling) {
-          card.insertBefore(pill, cardBody.nextSibling);
-        }
+  try {
+    const cards = document.querySelectorAll(`.svx-feed-card[data-shayari-id="${shayari.id}"]`);
+    cards.forEach(card => {
+      // 1. Text & typography
+      const textEl = card.querySelector('.svx-shayari-text');
+      if (textEl) {
+        textEl.textContent = shayari.formatted || shayari.content;
+        const sizeClass = getAutoFitClass(shayari.content || '');
+        textEl.className = `svx-shayari-text font-${shayari.font_style || 'nastaliq'} ${sizeClass}`;
       }
-      pill.setAttribute('data-song-url', shayari.song_url);
-      pill.innerHTML = `
-        <div class="svx-album-art" aria-hidden="true">
-          ${renderIcon('Disc')}
-        </div>
-        <div class="svx-audio-info">
-          <span class="svx-song-title">${shayari.song_name || 'Shayari BGM'}</span>
-          <span class="svx-song-artist">${shayari.song_artist || 'Viral Audio'}</span>
-        </div>
-        <div class="svx-equalizer paused" aria-hidden="true">
-          <div class="svx-eq-bar"></div>
-          <div class="svx-eq-bar"></div>
-          <div class="svx-eq-bar"></div>
-          <div class="svx-eq-bar"></div>
-          <div class="svx-eq-bar"></div>
-        </div>
-        <button class="svx-audio-toggle-btn" data-action="toggle-audio" aria-label="Play or Pause BGM">
-          ${renderIcon('Play', 'svx-icon-sm')}
-        </button>
-      `;
-    } else if (pill) {
-      pill.remove();
-    }
 
-    // Cache updated object on DOM node
-    card._shayari = { ...(card._shayari || {}), ...shayari };
-  });
+      // 2. Mood theme
+      if (shayari.mood_theme) {
+        card.setAttribute('data-mood', shayari.mood_theme);
+        card.className = `svx-glass-card svx-feed-card mood-${shayari.mood_theme}`;
+      }
+
+      // 3. Audio Pill
+      let pill = card.querySelector('.svx-audio-pill');
+      if (shayari.song_url) {
+        if (!pill) {
+          pill = document.createElement('div');
+          pill.className = 'svx-audio-pill';
+          const cardBody = card.querySelector('.svx-card-body');
+          if (cardBody && cardBody.nextSibling) {
+            card.insertBefore(pill, cardBody.nextSibling);
+          }
+        }
+        pill.setAttribute('data-song-url', shayari.song_url);
+        pill.innerHTML = `
+          <div class="svx-album-art" aria-hidden="true">
+            ${renderIcon('Disc')}
+          </div>
+          <div class="svx-audio-info">
+            <span class="svx-song-title">${shayari.song_name || 'Shayari BGM'}</span>
+            <span class="svx-song-artist">${shayari.song_artist || 'Viral Audio'}</span>
+          </div>
+          <div class="svx-equalizer paused" aria-hidden="true">
+            <div class="svx-eq-bar"></div>
+            <div class="svx-eq-bar"></div>
+            <div class="svx-eq-bar"></div>
+            <div class="svx-eq-bar"></div>
+            <div class="svx-eq-bar"></div>
+          </div>
+          <button class="svx-audio-toggle-btn" data-action="toggle-audio" aria-label="Play or Pause BGM">
+            ${renderIcon('Play', 'svx-icon-sm')}
+          </button>
+        `;
+      } else if (pill) {
+        pill.remove();
+      }
+
+      // Cache updated object on DOM node
+      card._shayari = { ...(card._shayari || {}), ...shayari };
+    });
+    console.log(`[SVX] Synchronously updated shayari ${shayari.id} across ${cards.length} card(s)`);
+  } catch (err) {
+    console.error('[SVX] Error in updateShayariInDOM:', err);
+  }
 }
 
 /**

@@ -286,9 +286,30 @@ export class LocalStorageDB {
 
   async getShayarisByUser(userId) {
     const rawShayaris = JSON.parse(this.storage.getItem(this.kShayaris) || '[]');
+    const currentUser = this.getCurrentUser();
+    const likes = JSON.parse(this.storage.getItem(this.kLikes) || '[]');
+    const users = JSON.parse(this.storage.getItem(this.kUsers) || '[]');
+
     return rawShayaris
       .filter(s => s.user_id === userId)
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map(s => {
+        const author = users.find(u => u.id === s.user_id) || {
+          display_name: 'Unknown Shayar',
+          handle: 'anonymous',
+          is_verified: false,
+          is_admin: false
+        };
+        const hasLiked = currentUser ? likes.some(l => l.user_id === currentUser.id && l.shayari_id === s.id) : false;
+        return {
+          ...s,
+          author_name: author.display_name,
+          author_handle: author.handle,
+          is_verified: author.is_verified || false,
+          is_admin: author.is_admin || false,
+          has_liked: hasLiked
+        };
+      });
   }
 
   async createShayari(data) {
@@ -345,6 +366,20 @@ export class LocalStorageDB {
     if (data.song_art !== undefined) shayaris[idx].song_art = data.song_art;
 
     this.storage.setItem(this.kShayaris, JSON.stringify(shayaris));
+    try {
+      const cached = this.getCachedFeed() || [];
+      const cIdx = cached.findIndex(s => s.id === shayariId);
+      if (cIdx !== -1) {
+        cached[cIdx] = { ...cached[cIdx], ...data };
+        this.cacheFeed(cached);
+      }
+      const uCached = this.getCachedUserShayaris(userId) || [];
+      const uIdx = uCached.findIndex(s => s.id === shayariId);
+      if (uIdx !== -1) {
+        uCached[uIdx] = { ...uCached[uIdx], ...data };
+        this.cacheUserShayaris(userId, uCached);
+      }
+    } catch {}
     return shayaris[idx];
   }
 
@@ -767,9 +802,36 @@ export class SupabaseDB {
 
   async getShayarisByUser(userId) {
     const shayaris = await this._fetch(
-      `/shayaris?user_id=eq.${userId}&order=created_at.desc&select=*`
+      `/shayaris?user_id=eq.${userId}&select=*,users:user_id(handle,display_name,is_verified,is_admin)&order=created_at.desc`
     );
-    return shayaris || [];
+    if (!shayaris || shayaris.length === 0) return [];
+
+    const currentUser = this.getCurrentUser();
+    let userLikes = [];
+    if (currentUser && shayaris.length > 0) {
+      const shayariIds = shayaris.map(s => s.id).join(',');
+      userLikes = await this._fetch(
+        `/likes?user_id=eq.${currentUser.id}&shayari_id=in.(${shayariIds})&select=shayari_id`
+      ).catch(() => []);
+    }
+    const likedSet = new Set((userLikes || []).map(l => l.shayari_id));
+
+    return shayaris.map(s => {
+      const author = s.users || {
+        display_name: 'Unknown Shayar',
+        handle: 'anonymous',
+        is_verified: false,
+        is_admin: false
+      };
+      return {
+        ...s,
+        author_name: author.display_name,
+        author_handle: author.handle,
+        is_verified: author.is_verified || false,
+        is_admin: author.is_admin || false,
+        has_liked: likedSet.has(s.id)
+      };
+    });
   }
 
   async createShayari(data) {

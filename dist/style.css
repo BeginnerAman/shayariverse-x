@@ -253,6 +253,8 @@ textarea,
   position: relative;
   overflow: hidden;
   contain: layout style paint;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -660,13 +662,11 @@ textarea,
   justify-content: center;
   color: var(--svx-accent-cyan);
   flex-shrink: 0;
-  animation: svx-spin 4s linear infinite;
-  animation-play-state: paused;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .svx-album-art.playing {
-  animation-play-state: running;
+  animation: svx-spin 4s linear infinite;
 }
 
 @keyframes svx-spin {
@@ -718,18 +718,26 @@ textarea,
   border-radius: 1px;
   background: var(--svx-accent-cyan);
   transform-origin: bottom;
+  transform: scaleY(0.25);
+  opacity: 0.4;
+}
+
+.svx-eq-bar:nth-child(1) { animation-delay: 0s; }
+.svx-eq-bar:nth-child(2) { animation-delay: 0.15s; }
+.svx-eq-bar:nth-child(3) { animation-delay: 0.3s; }
+.svx-eq-bar:nth-child(4) { animation-delay: 0.1s; }
+.svx-eq-bar:nth-child(5) { animation-delay: 0.25s; }
+
+.svx-equalizer:not(.paused) .svx-eq-bar,
+.svx-equalizer.playing .svx-eq-bar {
+  opacity: 1;
   will-change: transform;
   animation: svx-eq-bounce 0.8s ease-in-out infinite alternate;
 }
 
-.svx-eq-bar:nth-child(1) { transform: scaleY(0.35); animation-delay: 0s; }
-.svx-eq-bar:nth-child(2) { transform: scaleY(0.75); animation-delay: 0.15s; }
-.svx-eq-bar:nth-child(3) { transform: scaleY(0.5); animation-delay: 0.3s; }
-.svx-eq-bar:nth-child(4) { transform: scaleY(0.9); animation-delay: 0.1s; }
-.svx-eq-bar:nth-child(5) { transform: scaleY(0.6); animation-delay: 0.25s; }
-
 .svx-equalizer.paused .svx-eq-bar {
-  animation-play-state: paused;
+  animation: none !important;
+  will-change: auto !important;
   transform: scaleY(0.25) !important;
   opacity: 0.4;
 }
@@ -1779,8 +1787,7 @@ textarea,
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  box-shadow: 0 0 12px rgba(244, 67, 54, 0.3);
-  animation: svx-pulse-glow 2s infinite alternate;
+  box-shadow: 0 0 10px rgba(244, 67, 54, 0.25);
 }
 
 /* Profile Card Styling */
