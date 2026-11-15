@@ -100,6 +100,18 @@ html, body {
   flex-direction: column;
 }
 
+/* 0ms Touch Response & Native Tap Optimization */
+button,
+a,
+[role="button"],
+.svx-nav-item,
+.svx-btn-card-ctrl,
+.svx-music-tab-btn,
+.svx-audio-toggle-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Native text selection for inputs & shayari content */
 .svx-selectable,
 .svx-shayari-text,
@@ -2375,7 +2387,7 @@ textarea,
   position: fixed;
   inset: 0;
   background: rgba(4, 4, 10, 0.94);
-  z-index: 500;
+  z-index: 3000;
   display: flex;
   align-items: center;
   justify-content: center;

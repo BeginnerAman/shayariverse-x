@@ -56,23 +56,25 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p build-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.1.1.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.1.2.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-Latest.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShayariVerse-X-v1.1.1-APK
-          path: build-artifacts/ShayariVerse-X-v1.1.1.apk
+          name: ShayariVerse-X-v1.1.2-APK
+          path: build-artifacts/ShayariVerse-X-v1.1.2.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.1.1
+      - name: Publish GitHub Release v1.1.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.1.1 --yes || true
-          gh release create v1.1.1 build-artifacts/ShayariVerse-X-v1.1.1.apk build-artifacts/ShayariVerse-X-Latest.apk \
-            --title "ShayariVerse X v1.1.1" \
-            --notes "### ShayariVerse X v1.1.1 Release Notes
-          - **Organic Dynamic Audio Equalizer Wave**: Fixed synchronized bar bounce by assigning staggered delays (0s to 0.35s) and unique frequencies (0.60s to 0.90s) across all 5 bars for an authentic, fluid visualizer wave without CPU/GPU heat.
-          - **0ms Instant Discover Tab Switching**: Converted Viral Reels BGM and Live Search into persistent dual containers with in-memory caching and focused transitions, eliminating DOM destructions and stutter."
+          gh release delete v1.1.2 --yes || true
+          gh release create v1.1.2 build-artifacts/ShayariVerse-X-v1.1.2.apk build-artifacts/ShayariVerse-X-Latest.apk \
+            --title "ShayariVerse X v1.1.2" \
+            --notes "### ShayariVerse X v1.1.2 Release Notes
+          - **Top-Layer Delete Confirmation Dialog**: Raised dialog overlay z-index to 3000, ensuring confirmation popups float above comment sheets without requiring sheets to be closed.
+          - **0ms Instant Comment Delete & Count Decrement**: Preserved target couplet IDs and added optimistic comment deletion with synchronized feed/profile card count decrements.
+          - **Full Keyboard Predictive Text & Emoji Access**: Enabled autocorrect, autocomplete, autocapitalize, and spellcheck across composer and comments, unlocking native keyboard word suggestions and full emoji palette freedom.
+          - **0ms Touch Latency Optimization**: Added touch-action manipulation across all buttons and navigation elements for crisp, native touch response."

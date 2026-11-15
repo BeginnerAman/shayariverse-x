@@ -1256,6 +1256,10 @@ export class SVXCommentModal {
   }
 
   async handleDelete(commentId) {
+    const targetShayariId = this.currentShayariId;
+    if (!targetShayariId) return;
+
+    const itemEl = this.listEl?.querySelector(`.svx-comment-item[data-comment-id="${commentId}"]`);
     const currentUser = db.getCurrentUser();
     const isGodMode = typeof localStorage !== 'undefined' && localStorage.getItem('svx_admin_god_mode') === 'true';
     const isAdmin = currentUser && (currentUser.is_admin || isGodMode);
@@ -1268,13 +1272,44 @@ export class SVXCommentModal {
     });
 
     if (ok) {
+      // 1. Optimistic 0ms UI removal from sheet
+      if (itemEl) itemEl.remove();
+
+      // 2. Recalculate remaining count and update sheet badge
+      const remainingCount = this.listEl ? this.listEl.querySelectorAll('.svx-comment-item').length : 0;
+      if (this.countBadge) {
+        this.countBadge.textContent = `${remainingCount} comment${remainingCount === 1 ? '' : 's'}`;
+      }
+      if (remainingCount === 0 && this.listEl) {
+        this.listEl.innerHTML = `
+          <div class="svx-comment-empty-state">
+            ${renderIcon('MessageCircle', 'svx-icon-lg')}
+            <span>Pehla alfaaz aapka ho sakta hai... Guftagu shuru karein.</span>
+          </div>
+        `;
+      }
+
+      // 3. Update all card comment counts in Feed and Profile simultaneously in 0ms!
+      this.onCommentChange?.(targetShayariId, remainingCount);
+
+      // 4. Update local cached feed so count persists across app restarts
+      try {
+        const cached = db.local?.getCachedFeed() || [];
+        const target = cached.find(s => s.id === targetShayariId);
+        if (target) {
+          target.comments_count = remainingCount;
+          db.local?.cacheFeed(cached);
+        }
+      } catch {}
+
       try {
         await db.deleteComment(commentId, currentUser?.id || '', isAdmin);
-        await this.loadComments();
-        const comments = await db.getComments(this.currentShayariId);
-        this.onCommentChange?.(this.currentShayariId, comments.length);
         showToast("Comment deleted.", "Trash2");
       } catch (err) {
+        console.warn('[SVX Comments] Delete failed, reloading comments:', err);
+        await this.loadComments();
+        const comments = await db.getComments(targetShayariId);
+        this.onCommentChange?.(targetShayariId, comments.length);
         await SVXDialog.alert({ title: "Delete Failed", message: err.message || "Failed to delete comment." });
       }
     }

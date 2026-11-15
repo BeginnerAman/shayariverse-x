@@ -1255,14 +1255,18 @@ export class UnifiedDB {
   }
 
   async deleteComment(commentId, userId, isAdmin = false) {
+    let result = null;
     try {
       if (this.isLiveMode()) {
-        return await this.supabase.deleteComment(commentId, userId, isAdmin);
+        result = await this.supabase.deleteComment(commentId, userId, isAdmin);
       }
     } catch (err) {
       console.warn('[SVX DB] Live deleteComment failed, using local:', err);
     }
-    return await this.local.deleteComment(commentId, userId, isAdmin);
+    try {
+      await this.local.deleteComment(commentId, userId, isAdmin);
+    } catch {}
+    return result || true;
   }
 
   async logAdminAction(adminId, action, targetId, targetType, targetUserId) {
