@@ -12,7 +12,7 @@
 
   /* Glassmorphism System */
   --svx-glass-bg: rgba(255, 255, 255, 0.05);
-  --svx-glass-blur: 24px;
+  --svx-glass-blur: 16px;
   --svx-glass-saturate: 180%;
   --svx-glass-border: rgba(255, 255, 255, 0.14);
   --svx-glass-border-hover: rgba(255, 255, 255, 0.22);
@@ -248,8 +248,8 @@ textarea,
 /* 5. Liquid Glass Card Engine */
 .svx-glass-card {
   background: var(--svx-glass-bg);
-  backdrop-filter: blur(var(--svx-glass-blur)) saturate(var(--svx-glass-saturate));
-  -webkit-backdrop-filter: blur(var(--svx-glass-blur)) saturate(var(--svx-glass-saturate));
+  backdrop-filter: blur(var(--svx-glass-blur));
+  -webkit-backdrop-filter: blur(var(--svx-glass-blur));
   border: 1px solid var(--svx-glass-border);
   border-radius: var(--svx-glass-radius);
   box-shadow: var(--svx-glass-shadow), var(--svx-glass-highlight);
@@ -362,8 +362,8 @@ textarea,
 }
 
 @keyframes svx-badge-pulse {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 193, 68, 0.4)); transform: scale(1); }
-  50%      { filter: drop-shadow(0 0 8px rgba(255, 193, 68, 0.85)); transform: scale(1.04); }
+  0%, 100% { transform: scale(1); opacity: 0.88; }
+  50%      { transform: scale(1.06); opacity: 1; }
 }
 
 /* 7. Bottom Navigation Bar */
@@ -731,26 +731,29 @@ textarea,
 
 .svx-eq-bar {
   width: 2.5px;
+  height: 100%;
   border-radius: 1px;
   background: var(--svx-accent-cyan);
+  transform-origin: bottom;
+  will-change: transform;
   animation: svx-eq-bounce 0.8s ease-in-out infinite alternate;
 }
 
-.svx-eq-bar:nth-child(1) { height: 35%; animation-delay: 0s; }
-.svx-eq-bar:nth-child(2) { height: 75%; animation-delay: 0.15s; }
-.svx-eq-bar:nth-child(3) { height: 50%; animation-delay: 0.3s; }
-.svx-eq-bar:nth-child(4) { height: 90%; animation-delay: 0.1s; }
-.svx-eq-bar:nth-child(5) { height: 60%; animation-delay: 0.25s; }
+.svx-eq-bar:nth-child(1) { transform: scaleY(0.35); animation-delay: 0s; }
+.svx-eq-bar:nth-child(2) { transform: scaleY(0.75); animation-delay: 0.15s; }
+.svx-eq-bar:nth-child(3) { transform: scaleY(0.5); animation-delay: 0.3s; }
+.svx-eq-bar:nth-child(4) { transform: scaleY(0.9); animation-delay: 0.1s; }
+.svx-eq-bar:nth-child(5) { transform: scaleY(0.6); animation-delay: 0.25s; }
 
 .svx-equalizer.paused .svx-eq-bar {
   animation-play-state: paused;
-  height: 25% !important;
+  transform: scaleY(0.25) !important;
   opacity: 0.4;
 }
 
 @keyframes svx-eq-bounce {
-  0%   { height: 20%; }
-  100% { height: 100%; }
+  0%   { transform: scaleY(0.2); }
+  100% { transform: scaleY(1); }
 }
 
 .svx-audio-toggle-btn {

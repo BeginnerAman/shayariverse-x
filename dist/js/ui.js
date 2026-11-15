@@ -1372,10 +1372,11 @@ export class SVXShareEngine {
     const content = (shayari.formatted || shayari.content || '').trim();
     const authorName = shayari.author_name || 'Aman';
     const authorHandle = shayari.author_handle ? `@${shayari.author_handle.replace(/^@/, '')}` : '@aman';
-    const songName = shayari.song_name ? `\n🎵 BGM: ${shayari.song_name}` : '';
-    const repoLink = CONFIG.REPO_URL ? `\n✨ ShayariVerse X • ${CONFIG.REPO_URL}` : '\n✨ Shared via ShayariVerse X';
+    const songName = shayari.song_name ? `\n♫ BGM: ${shayari.song_name}` : '';
+    const downloadLink = CONFIG.APK_DOWNLOAD_URL || `https://github.com/BeginnerAman/shayariverse-x/releases/download/v${CONFIG.VERSION}/ShayariVerse-X-v${CONFIG.VERSION}.apk`;
+    const brandLink = `\n\n✧ Download ShayariVerse X:\n${downloadLink}`;
 
-    const shareText = `"${content}"\n\n— ${authorName} (${authorHandle})${songName}\n${repoLink}`;
+    const shareText = `"${content}"\n\n— ${authorName} (${authorHandle})${songName}${brandLink}`;
 
     // 1. Instant Native Web Share (WhatsApp, Instagram, Telegram, SMS, etc.)
     if (navigator.share) {
