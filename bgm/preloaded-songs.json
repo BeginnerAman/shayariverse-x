@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "slowed-reverb",
+      "name": "Slowed + Reverb",
+      "icon": "Disc",
+      "tracks": [
+        {
+          "id": "sr-001",
+          "name": "Tum Hi Ho (Slowed + Reverb)",
+          "artist": "Arijit Singh",
+          "file": "slowed-reverb-tum-hi-ho.mp3",
+          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/slowed-reverb-tum-hi-ho.mp3",
+          "duration": 210,
+          "art": null
+        },
+        {
+          "id": "sr-002",
+          "name": "Faasle (Slowed + Reverb)",
+          "artist": "Aditya Rikhari",
+          "file": "faasle-slowed.mp3",
+          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/faasle-slowed.mp3",
+          "duration": 185,
+          "art": null
+        }
+      ]
+    },
+    {
+      "id": "sad-flute",
+      "name": "Sad Flute & Violin",
+      "icon": "Music",
+      "tracks": [
+        {
+          "id": "sf-001",
+          "name": "Raataan Lambiyan (Sad Flute)",
+          "artist": "Jubin Nautiyal",
+          "file": "raataan-lambiyan-flute.mp3",
+          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/raataan-lambiyan-flute.mp3",
+          "duration": 160,
+          "art": null
+        }
+      ]
+    },
+    {
+      "id": "lofi-night",
+      "name": "Late Night Lofi",
+      "icon": "Disc",
+      "tracks": [
+        {
+          "id": "ln-001",
+          "name": "Kesariya (Lofi Chill)",
+          "artist": "Pritam & Arijit Singh",
+          "file": "kesariya-lofi.mp3",
+          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/kesariya-lofi.mp3",
+          "duration": 195,
+          "art": null
+        },
+        {
+          "id": "ln-002",
+          "name": "Pee Loon (Late Night Lofi)",
+          "artist": "Mohit Chauhan",
+          "file": "pee-loon-lofi.mp3",
+          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/pee-loon-lofi.mp3",
+          "duration": 220,
+          "art": null
+        }
+      ]
+    },
+    {
+      "id": "royal-urdu",
+      "name": "Royal Urdu Vibe",
+      "icon": "Crown",
+      "tracks": [
+        {
+          "id": "ru-001",
+          "name": "Tajdar-e-Haram (Acoustic Sarangi)",
+          "artist": "Atif Aslam",
+          "file": "tajdar-e-haram-acoustic.mp3",
+          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/tajdar-e-haram-acoustic.mp3",
+          "duration": 240,
+          "art": null
+        }
+      ]
+    }
+  ]
+}

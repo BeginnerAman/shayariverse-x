@@ -1,0 +1,37 @@
+{
+  "name": "shayariverse-x",
+  "version": "1.0.0",
+  "description": "ShayariVerse X — Dark Liquid Glassmorphism Social Shayari & Music Application",
+  "type": "module",
+  "main": "js/ui.js",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open": "npx cap open android",
+    "cap:add": "npx cap add android",
+    "test": "node --check js/ui.js && node --check js/db.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beginneraman/shayariverse-x.git"
+  },
+  "keywords": [
+    "shayari",
+    "poetry",
+    "music",
+    "android",
+    "glassmorphism",
+    "capacitor",
+    "supabase"
+  ],
+  "author": "Aman (@beginneraman)",
+  "license": "MIT",
+  "devDependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}

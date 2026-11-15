@@ -1,0 +1,36 @@
+name: Supabase Keep-Alive Ping
+
+on:
+  schedule:
+    # Run every 3 days at 06:00 UTC (well within the 7-day inactivity pause window)
+    - cron: '0 6 */3 * *'
+  workflow_dispatch:  # Allow manual trigger from GitHub Actions tab
+
+jobs:
+  ping:
+    name: Ping Supabase REST API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping ShayariVerse X Supabase Database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "Pinging ShayariVerse X Supabase project to prevent 7-day free tier pause..."
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::warning::SUPABASE_URL or SUPABASE_ANON_KEY secret is not set. Skipping ping."
+            exit 0
+          fi
+
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${SUPABASE_URL}/rest/v1/reserved_handles?select=handle&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+
+          echo "Supabase REST endpoint response code: $RESPONSE"
+          if [ "$RESPONSE" -ge 200 ] && [ "$RESPONSE" -lt 400 ]; then
+            echo "Success: Supabase project is active and healthy."
+          else
+            echo "::warning::Supabase ping returned HTTP status $RESPONSE"
+            exit 1
+          fi
