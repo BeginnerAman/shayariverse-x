@@ -1229,8 +1229,7 @@ export class SVXUpdateChecker {
       const currentVersion = CONFIG.VERSION.replace(/^v/, '').trim();
 
       if (this.isNewer(latestVersion, currentVersion)) {
-        const apkAsset = release.assets?.find(a => a.name.endsWith('.apk')) || release.assets?.[0];
-        const downloadUrl = apkAsset?.browser_download_url || release.html_url;
+        const releaseUrl = release.html_url || `https://github.com/BeginnerAman/shayariverse-x/releases/tag/v${latestVersion}`;
 
         const updateNow = await SVXDialog.confirm({
           title: `Update Ready! (v${latestVersion})`,
@@ -1240,8 +1239,8 @@ export class SVXUpdateChecker {
           isDanger: false
         });
 
-        if (updateNow && downloadUrl) {
-          window.open(downloadUrl, '_system');
+        if (updateNow && releaseUrl) {
+          window.open(releaseUrl, '_system');
         }
       } else if (isManual) {
         showToast(`You have the latest version (v${CONFIG.VERSION})`, "Check");

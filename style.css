@@ -99,11 +99,15 @@ html, body {
   flex-direction: column;
 }
 
-/* Shayari content selectable for copy */
+/* Native text selection for inputs & shayari content */
 .svx-selectable,
-.svx-shayari-text {
-  -webkit-user-select: text;
-  user-select: text;
+.svx-shayari-text,
+input,
+textarea,
+.svx-composer-textarea {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
 }
 
 /* 3. Floating Ambient Background Orbs */
@@ -119,55 +123,30 @@ html, body {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
-  will-change: transform;
 }
 
 .svx-orb-purple {
-  width: 380px;
-  height: 380px;
-  background: radial-gradient(circle, rgba(138, 43, 226, 0.22) 0%, rgba(138, 43, 226, 0) 70%);
-  filter: blur(80px);
-  top: -60px;
-  left: -80px;
-  animation: svx-orb-float-1 22s ease-in-out infinite alternate;
+  width: 440px;
+  height: 440px;
+  background: radial-gradient(circle, rgba(138, 43, 226, 0.18) 0%, rgba(138, 43, 226, 0) 70%);
+  top: -80px;
+  left: -100px;
 }
 
 .svx-orb-cyan {
-  width: 320px;
-  height: 320px;
-  background: radial-gradient(circle, rgba(0, 210, 255, 0.16) 0%, rgba(0, 210, 255, 0) 70%);
-  filter: blur(75px);
-  top: 40%;
-  right: -90px;
-  animation: svx-orb-float-2 26s ease-in-out infinite alternate;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(0, 210, 255, 0.12) 0%, rgba(0, 210, 255, 0) 70%);
+  top: 35%;
+  right: -100px;
 }
 
 .svx-orb-rose {
-  width: 280px;
-  height: 280px;
-  background: radial-gradient(circle, rgba(255, 64, 129, 0.14) 0%, rgba(255, 64, 129, 0) 70%);
-  filter: blur(70px);
-  bottom: 80px;
-  left: 20%;
-  animation: svx-orb-float-3 20s ease-in-out infinite alternate;
-}
-
-@keyframes svx-orb-float-1 {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(40px, 35px) scale(1.08); }
-  100% { transform: translate(-20px, 60px) scale(0.94); }
-}
-
-@keyframes svx-orb-float-2 {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(-50px, -30px) scale(1.12); }
-  100% { transform: translate(25px, 40px) scale(0.96); }
-}
-
-@keyframes svx-orb-float-3 {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(30px, -45px) scale(1.05); }
-  100% { transform: translate(-35px, 20px) scale(0.92); }
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, rgba(255, 64, 129, 0.10) 0%, rgba(255, 64, 129, 0) 70%);
+  bottom: 60px;
+  left: 15%;
 }
 
 /* 4. Main App Container & Layout */
@@ -178,17 +157,24 @@ html, body {
   width: 100%;
   max-width: var(--svx-max-width);
   margin: 0 auto;
-  padding: 16px 16px calc(var(--svx-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 24px) 16px;
+  padding: 0 16px calc(var(--svx-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 24px) 16px;
   display: flex;
   flex-direction: column;
 }
 
-/* Top App Bar */
+/* Sticky Top App Bar */
 .svx-top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 4px 20px 4px;
+  padding: 14px 4px 14px 4px;
+  background: rgba(6, 6, 12, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .svx-brand-lockup {
@@ -442,19 +428,20 @@ html, body {
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), filter 0.22s ease;
 }
 
-/* Elevated + Create Button */
+/* Center-Aligned + Create Button with Liquid Dual-Aura */
 .svx-nav-create {
-  position: relative;
-  top: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .svx-nav-create-btn {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--svx-accent-purple), #9d4edd);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 6px 20px rgba(138, 43, 226, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: linear-gradient(135deg, var(--svx-accent-purple), var(--svx-accent-cyan));
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 20px rgba(138, 43, 226, 0.55), 0 0 10px rgba(0, 210, 255, 0.35), inset 0 1.5px 0 rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -465,8 +452,8 @@ html, body {
 }
 
 .svx-nav-create-btn:active {
-  transform: scale(0.88);
-  box-shadow: 0 2px 10px rgba(138, 43, 226, 0.4);
+  transform: scale(0.90);
+  box-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
 }
 
 .svx-nav-create-btn .svx-icon {
@@ -521,6 +508,8 @@ html, body {
   user-select: none;
   cursor: pointer;
   position: relative;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 340px;
 }
 
 /* Card Header */
@@ -901,10 +890,16 @@ html, body {
 }
 
 .svx-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(14, 14, 24, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0 16px 0;
+  padding: 12px 0 14px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 16px;
 }
@@ -2510,7 +2505,8 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
 
   /* Centered Floating Dock Navigation Bar on Tablets */
   .svx-bottom-nav {
-    max-width: 520px;
+    max-width: 620px;
+    width: min(92%, 620px);
     left: 50% !important;
     right: auto !important;
     transform: translateX(-50%);
@@ -2521,6 +2517,24 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
     background: rgba(14, 14, 24, 0.92);
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
+  }
+
+  .svx-nav-container {
+    max-width: 100%;
+    justify-content: space-evenly;
+    padding: 0 16px;
+  }
+
+  .svx-nav-item {
+    min-width: 88px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12.5px;
+  }
+
+  .svx-nav-create-btn {
+    width: 52px;
+    height: 52px;
   }
 
   /* Centered Floating Modals on Tablet */

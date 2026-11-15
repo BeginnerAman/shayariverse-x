@@ -115,6 +115,7 @@ export class SVXComposerModal {
     this.charCountEl = document.getElementById('svx-composer-char-count');
     this.autoFitBadge = document.getElementById('svx-composer-autofit-badge');
     this.autoFormatBtn = document.getElementById('svx-composer-autoformat-btn');
+    this.pasteBtn = document.getElementById('svx-composer-paste-btn');
     this.closeBtn = document.getElementById('svx-composer-close-btn');
     this.submitBtn = document.getElementById('svx-composer-submit-btn');
     this.changeBgmBtn = document.getElementById('svx-composer-change-bgm-btn');
@@ -158,6 +159,30 @@ export class SVXComposerModal {
         const formatted = autoFormat(this.textarea.value);
         this.textarea.value = formatted;
         this.updateLivePreview();
+      }
+    });
+
+    // Paste from clipboard action
+    this.pasteBtn?.addEventListener('click', async () => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text) {
+            if (this.textarea) {
+              const start = this.textarea.selectionStart || 0;
+              const end = this.textarea.selectionEnd || 0;
+              const val = this.textarea.value;
+              this.textarea.value = val.substring(0, start) + text + val.substring(end);
+              this.textarea.focus();
+              this.updateLivePreview();
+            }
+          }
+        } else {
+          this.textarea?.focus();
+        }
+      } catch (e) {
+        console.warn('[SVX Composer] Clipboard read failed, focusing textarea:', e);
+        this.textarea?.focus();
       }
     });
 

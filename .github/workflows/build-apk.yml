@@ -42,6 +42,11 @@ jobs:
           node scripts/generate-icons.js
           npx cap sync android
 
+      - name: Setup Persistent Signing Keystore
+        run: |
+          mkdir -p ~/.android
+          cp scripts/debug.keystore ~/.android/debug.keystore
+
       - name: Build Debug APK with Gradle
         run: |
           cd android
@@ -51,24 +56,26 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p build-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.0.3.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.0.4.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShayariVerse-X-v1.0.3-APK
-          path: build-artifacts/ShayariVerse-X-v1.0.3.apk
+          name: ShayariVerse-X-v1.0.4-APK
+          path: build-artifacts/ShayariVerse-X-v1.0.4.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.0.3
+      - name: Publish GitHub Release v1.0.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.0.3 --yes || true
-          gh release create v1.0.3 build-artifacts/ShayariVerse-X-v1.0.3.apk \
-            --title "ShayariVerse X v1.0.3" \
-            --notes "### ShayariVerse X v1.0.3 Release Notes
-          - **Single-Toast Policy & Debounced Update Check**: Tapping 'Check for Updates' repeatedly no longer stacks toasts; previous toasts are cleared immediately with button debouncing & animated spinner feedback.
-          - **Minimal & Clean Bottom Navigation**: Removed horizontal neon indicator bar line entirely for a sleek, distraction-free aesthetic with glowing cyan active icons.
-          - **Compact Circular Mood Swatches**: Replaced cut-off text pills with 6 luminous circular color spheres (Cyber Purple, Midnight Cyan, Crimson Rose, Golden Amber, Emerald Mint, Obsidian Noir) that fit all screen widths with zero clipping.
-          - **Symmetric Segmented Typography**: Replaced uneven font pills with a 3-column equal-width glass grid (Nastaliq, Elegant, Modern) for balanced alignment on mobile and tablet."
+          gh release delete v1.0.4 --yes || true
+          gh release create v1.0.4 build-artifacts/ShayariVerse-X-v1.0.4.apk \
+            --title "ShayariVerse X v1.0.4" \
+            --notes "### ShayariVerse X v1.0.4 Release Notes
+          - **Permanent Keystore & Seamless Updates**: Integrated a fixed signing certificate across CI builds, permanently eliminating package conflict errors during future updates.
+          - **Sticky Top Bar & Modal Headers**: App brand header and composer action buttons remain pinned at the top during scrolling with frosted liquid glass blur.
+          - **1-Tap Clipboard Paste**: Added a dedicated Paste button to the composer toolbar and restored native long-press text selection.
+          - **Tablet Ergonomics**: Expanded floating dock navigation to 620px with spacious 88px touch zones for balanced tablet usability.
+          - **Center-Aligned + Create Button**: Centered with mathematical symmetry and elevated with dual-tone purple-cyan glowing liquid aura.
+          - **Buttery-Smooth Zero Battery Drain**: Hardware-accelerated ambient meshes and content-visibility optimization for locked 120 FPS scrolling."
