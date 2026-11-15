@@ -54,6 +54,7 @@
 
   /* Ergonomics */
   --svx-max-width: 480px;
+  --svx-top-bar-height: 60px;
   --svx-bottom-nav-height: 64px;
 }
 
@@ -170,11 +171,12 @@ textarea,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 4px 14px 4px;
-  background: rgba(6, 6, 12, 0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 14px 16px;
+  margin: 0 -16px;
+  background: rgba(6, 6, 12, 0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .svx-brand-lockup {
@@ -991,48 +993,57 @@ textarea,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 4px 2px 4px;
 }
 
 .svx-btn-autoformat {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(138, 43, 226, 0.18);
-  border: 1px solid rgba(138, 43, 226, 0.4);
+  background: rgba(138, 43, 226, 0.16);
+  border: 1px solid rgba(138, 43, 226, 0.35);
   color: var(--svx-accent-cyan);
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: var(--svx-glass-radius-pill);
   font-family: var(--svx-font-primary);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
 }
 
+.svx-btn-autoformat:hover {
+  background: rgba(138, 43, 226, 0.25);
+  border-color: rgba(0, 210, 255, 0.4);
+  box-shadow: 0 0 12px rgba(138, 43, 226, 0.3);
+}
+
 .svx-btn-autoformat:active {
-  transform: scale(0.94);
-  background: rgba(138, 43, 226, 0.3);
+  transform: scale(0.95);
+  background: rgba(138, 43, 226, 0.35);
 }
 
 .svx-composer-meta-stats {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: 6px;
+  font-size: 11.5px;
   color: var(--svx-text-muted);
 }
 
-.svx-autofit-badge {
-  background: rgba(255, 255, 255, 0.08);
-  padding: 2px 8px;
-  border-radius: var(--svx-glass-radius-pill);
-  font-family: var(--svx-font-mono);
+.svx-autofit-text {
+  font-size: 11.5px;
+  color: var(--svx-text-muted);
+  font-weight: 500;
+  font-family: var(--svx-font-primary);
+  letter-spacing: 0.02em;
+}
+
+.svx-meta-dot {
+  color: rgba(255, 255, 255, 0.2);
   font-size: 10px;
-  color: var(--svx-accent-amber);
-  border: 1px solid rgba(255, 193, 68, 0.2);
 }
 
 /* Customization Trays (Mood & Font) */
@@ -1199,6 +1210,22 @@ textarea,
   flex-direction: column;
   gap: 16px;
   width: 100%;
+}
+
+/* Sticky Discover Header & Mode Switcher Bar */
+.svx-discover-sticky-bar {
+  position: sticky;
+  top: var(--svx-top-bar-height, 60px);
+  z-index: 90;
+  background: rgba(6, 6, 12, 0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 16px 14px 16px;
+  margin: 0 -16px 8px -16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Dual Tab Switcher (Viral BGM vs Live Search) */
@@ -1383,10 +1410,13 @@ textarea,
 .svx-track-title-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .svx-track-title {
+  flex: 1;
+  min-width: 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--svx-text-primary);
@@ -1404,12 +1434,18 @@ textarea,
 }
 
 .svx-source-badge {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
-  padding: 1px 5px;
+  padding: 2.5px 6px;
   border-radius: 4px;
   letter-spacing: 0.04em;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255, 255, 255, 0.08);
   color: var(--svx-text-secondary);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -2447,8 +2483,6 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   touch-action: manipulation;
 }
 
-.svx-main-viewport,
-.svx-view-section,
 .svx-feed-container,
 .svx-author-shayari-list {
   transform: translateZ(0);
