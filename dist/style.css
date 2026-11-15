@@ -722,17 +722,44 @@ textarea,
   opacity: 0.4;
 }
 
-.svx-eq-bar:nth-child(1) { animation-delay: 0s; }
-.svx-eq-bar:nth-child(2) { animation-delay: 0.15s; }
-.svx-eq-bar:nth-child(3) { animation-delay: 0.3s; }
-.svx-eq-bar:nth-child(4) { animation-delay: 0.1s; }
-.svx-eq-bar:nth-child(5) { animation-delay: 0.25s; }
-
 .svx-equalizer:not(.paused) .svx-eq-bar,
 .svx-equalizer.playing .svx-eq-bar {
   opacity: 1;
   will-change: transform;
-  animation: svx-eq-bounce 0.8s ease-in-out infinite alternate;
+  animation-name: svx-eq-bounce;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+.svx-equalizer:not(.paused) .svx-eq-bar:nth-child(1),
+.svx-equalizer.playing .svx-eq-bar:nth-child(1) {
+  animation-duration: 0.65s;
+  animation-delay: 0s;
+}
+
+.svx-equalizer:not(.paused) .svx-eq-bar:nth-child(2),
+.svx-equalizer.playing .svx-eq-bar:nth-child(2) {
+  animation-duration: 0.85s;
+  animation-delay: 0.18s;
+}
+
+.svx-equalizer:not(.paused) .svx-eq-bar:nth-child(3),
+.svx-equalizer.playing .svx-eq-bar:nth-child(3) {
+  animation-duration: 0.70s;
+  animation-delay: 0.35s;
+}
+
+.svx-equalizer:not(.paused) .svx-eq-bar:nth-child(4),
+.svx-equalizer.playing .svx-eq-bar:nth-child(4) {
+  animation-duration: 0.90s;
+  animation-delay: 0.12s;
+}
+
+.svx-equalizer:not(.paused) .svx-eq-bar:nth-child(5),
+.svx-equalizer.playing .svx-eq-bar:nth-child(5) {
+  animation-duration: 0.60s;
+  animation-delay: 0.28s;
 }
 
 .svx-equalizer.paused .svx-eq-bar {
@@ -744,6 +771,7 @@ textarea,
 
 @keyframes svx-eq-bounce {
   0%   { transform: scaleY(0.2); }
+  50%  { transform: scaleY(0.85); }
   100% { transform: scaleY(1); }
 }
 
@@ -1238,7 +1266,7 @@ textarea,
   gap: 6px;
   padding: 8px 12px;
   border-radius: var(--svx-glass-radius-pill);
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--svx-text-muted);
   font-family: var(--svx-font-primary);
@@ -1246,7 +1274,8 @@ textarea,
   font-weight: 600;
   cursor: pointer;
   outline: none;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .svx-music-tab-btn.active {

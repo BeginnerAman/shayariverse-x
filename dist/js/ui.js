@@ -603,7 +603,9 @@ export class SVXMusicController {
     this.searchBar = document.getElementById('svx-music-search-bar');
     this.searchInput = document.getElementById('svx-music-search-input');
     this.searchClear = document.getElementById('svx-music-search-clear');
-    this.tracksContainer = document.getElementById('svx-discover-tracks-container');
+    this.curatedContainer = document.getElementById('svx-discover-curated-container') || document.getElementById('svx-discover-tracks-container');
+    this.searchContainer = document.getElementById('svx-discover-search-container') || this.curatedContainer;
+    this.curatedLoaded = false;
 
     this.init();
   }
@@ -661,6 +663,7 @@ export class SVXMusicController {
   }
 
   switchTab(tab) {
+    if (this.activeTab === tab && this.curatedLoaded) return;
     this.activeTab = tab;
 
     this.tabButtons.forEach(btn => {
@@ -669,26 +672,40 @@ export class SVXMusicController {
 
     if (tab === 'curated') {
       if (this.searchBar) this.searchBar.style.display = 'none';
-      this.loadCuratedTab();
+      if (this.searchContainer && this.searchContainer !== this.curatedContainer) {
+        this.searchContainer.style.display = 'none';
+      }
+      if (this.curatedContainer) {
+        this.curatedContainer.style.display = 'flex';
+      }
+      if (!this.curatedLoaded) {
+        this.loadCuratedTab();
+      }
     } else {
       if (this.searchBar) this.searchBar.style.display = 'flex';
-      this.searchInput?.focus();
-      const currentQuery = this.searchInput?.value || '';
-      if (currentQuery.trim()) {
-        this.performSearch(currentQuery);
-      } else {
-        this.renderSearchPrompt();
+      if (this.curatedContainer && this.curatedContainer !== this.searchContainer) {
+        this.curatedContainer.style.display = 'none';
+      }
+      if (this.searchContainer) {
+        this.searchContainer.style.display = 'flex';
+        const currentQuery = this.searchInput?.value || '';
+        if (currentQuery.trim()) {
+          this.performSearch(currentQuery);
+        } else if (!this.searchContainer.children.length) {
+          this.renderSearchPrompt();
+        }
       }
     }
   }
 
   async loadCuratedTab() {
-    if (!this.tracksContainer) return;
+    if (!this.curatedContainer) return;
+    if (this.curatedLoaded && this.curatedContainer.children.length > 0) return;
     this.renderLoadingSkeletons();
 
     try {
       const categories = await audioEngine.loadCuratedBGM();
-      this.tracksContainer.innerHTML = '';
+      this.curatedContainer.innerHTML = '';
 
       categories.forEach(cat => {
         const catBlock = document.createElement('div');
@@ -708,16 +725,17 @@ export class SVXMusicController {
         });
 
         catBlock.appendChild(catList);
-        this.tracksContainer.appendChild(catBlock);
+        this.curatedContainer.appendChild(catBlock);
       });
+      this.curatedLoaded = true;
     } catch (err) {
       console.error('[SVX Music] Failed to load curated BGM:', err);
     }
   }
 
   renderSearchPrompt() {
-    if (!this.tracksContainer) return;
-    this.tracksContainer.innerHTML = `
+    if (!this.searchContainer) return;
+    this.searchContainer.innerHTML = `
       <div class="svx-glass-card" style="text-align: center; padding: 32px 16px;">
         <div class="svx-placeholder-icon" style="margin: 0 auto 12px auto;">
           ${renderIcon('Search', 'svx-icon-lg')}
@@ -731,8 +749,9 @@ export class SVXMusicController {
   }
 
   renderLoadingSkeletons() {
-    if (!this.tracksContainer) return;
-    this.tracksContainer.innerHTML = `
+    const target = this.activeTab === 'curated' ? this.curatedContainer : this.searchContainer;
+    if (!target) return;
+    target.innerHTML = `
       <div class="svx-skeleton-track"></div>
       <div class="svx-skeleton-track"></div>
       <div class="svx-skeleton-track"></div>
@@ -740,7 +759,7 @@ export class SVXMusicController {
   }
 
   async performSearch(query) {
-    if (!this.tracksContainer) return;
+    if (!this.searchContainer) return;
     const trimmed = query.trim();
     if (!trimmed) {
       this.renderSearchPrompt();
@@ -751,10 +770,10 @@ export class SVXMusicController {
 
     try {
       const results = await audioEngine.searchOnlineSongs(trimmed);
-      this.tracksContainer.innerHTML = '';
+      this.searchContainer.innerHTML = '';
 
       if (results.length === 0) {
-        this.tracksContainer.innerHTML = `
+        this.searchContainer.innerHTML = `
           <div class="svx-glass-card" style="text-align: center; padding: 32px 16px;">
             <div class="svx-placeholder-icon" style="margin: 0 auto 12px auto;">
               ${renderIcon('VolumeX', 'svx-icon-lg')}
@@ -776,7 +795,7 @@ export class SVXMusicController {
         listWrapper.appendChild(card);
       });
 
-      this.tracksContainer.appendChild(listWrapper);
+      this.searchContainer.appendChild(listWrapper);
     } catch (err) {
       console.error('[SVX Music] Search failed:', err);
     }

@@ -56,25 +56,23 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p build-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.1.0.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.1.1.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-Latest.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShayariVerse-X-v1.1.0-APK
-          path: build-artifacts/ShayariVerse-X-v1.1.0.apk
+          name: ShayariVerse-X-v1.1.1-APK
+          path: build-artifacts/ShayariVerse-X-v1.1.1.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.1.0
+      - name: Publish GitHub Release v1.1.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.1.0 --yes || true
-          gh release create v1.1.0 build-artifacts/ShayariVerse-X-v1.1.0.apk build-artifacts/ShayariVerse-X-Latest.apk \
-            --title "ShayariVerse X v1.1.0" \
-            --notes "### ShayariVerse X v1.1.0 Release Notes
-          - **Instant In-Place Couplet Editing**: Fixed DOM auto-fit sizing reference so edited couplets reflect instantly on screen in 0ms without requiring an app restart.
-          - **Zero-Flicker Synchronous Feed Startup**: Purged static empty placeholder cards from the initial HTML stream; feed loads cached couplets in 0ms on startup for a seamless experience.
-          - **Bidirectional Cross-Tab Like Synchronization**: Synchronized heart likes and counts across Feed and Profile views simultaneously, ensuring accurate glow states and preventing accidental unlikes.
-          - **Featherweight GPU Tuning & content-visibility Engine**: Added content-visibility layout containment for offscreen cards and eliminated paused equalizer compositor layers for zero-heat performance."
+          gh release delete v1.1.1 --yes || true
+          gh release create v1.1.1 build-artifacts/ShayariVerse-X-v1.1.1.apk build-artifacts/ShayariVerse-X-Latest.apk \
+            --title "ShayariVerse X v1.1.1" \
+            --notes "### ShayariVerse X v1.1.1 Release Notes
+          - **Organic Dynamic Audio Equalizer Wave**: Fixed synchronized bar bounce by assigning staggered delays (0s to 0.35s) and unique frequencies (0.60s to 0.90s) across all 5 bars for an authentic, fluid visualizer wave without CPU/GPU heat.
+          - **0ms Instant Discover Tab Switching**: Converted Viral Reels BGM and Live Search into persistent dual containers with in-memory caching and focused transitions, eliminating DOM destructions and stutter."

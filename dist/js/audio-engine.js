@@ -13,6 +13,7 @@ class AudioEngine {
     };
     this.currentTrack = null;
     this._isPlaying = false;
+    this._curatedCache = null;
     this.listeners = {
       playState: new Set(),
       trackChange: new Set(),
@@ -178,6 +179,10 @@ class AudioEngine {
    * Tab 1: Loads Curated Viral Reels BGMs from jsDelivr CDN / local JSON
    */
   async loadCuratedBGM() {
+    if (this._curatedCache && Array.isArray(this._curatedCache) && this._curatedCache.length > 0) {
+      return this._curatedCache;
+    }
+
     const paths = [
       'bgm/preloaded-songs.json',
       `${CONFIG.CDN_BASE}${CONFIG.SONGS_JSON}`
@@ -190,7 +195,8 @@ class AudioEngine {
           if (res.ok) {
             const data = await res.json();
             if (data && data.categories) {
-              return data.categories;
+              this._curatedCache = data.categories;
+              return this._curatedCache;
             }
           }
         } catch {
@@ -200,7 +206,7 @@ class AudioEngine {
     }
 
     // Hardcoded fallback dataset if network or file fetch fails
-    return [
+    const fallback = [
       {
         id: "slowed-reverb",
         name: "Slowed + Reverb",
@@ -272,6 +278,8 @@ class AudioEngine {
         ]
       }
     ];
+    this._curatedCache = fallback;
+    return fallback;
   }
 
   /**
