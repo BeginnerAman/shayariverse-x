@@ -276,7 +276,7 @@ export class SVXComposerModal {
 
     // Update preview text content (prevent XSS via textContent)
     if (this.previewText) {
-      this.previewText.textContent = rawVal.trim() ? rawVal : "Apni Shayari yahan likhein... auto-format aur mood preview live dekhein.";
+      this.previewText.textContent = rawVal.trim() ? rawVal : "Write your Shayari here... preview updates in real-time.";
       this.previewText.className = `svx-shayari-text font-${this.selectedFont} ${fit.className}`;
     }
 

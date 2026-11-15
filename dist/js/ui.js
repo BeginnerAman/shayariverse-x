@@ -551,7 +551,7 @@ export class SVXFeedController {
 
         const ok = await SVXDialog.confirm({
           title: "Delete Shayari?",
-          message: "This piece of jazbaat will be permanently removed.",
+          message: "Are you sure you want to delete this Shayari? This action cannot be undone.",
           confirmText: "Delete",
           isDanger: true
         });
@@ -1005,7 +1005,7 @@ export class SVXAuthModal {
     const pin = this.pinInput?.value.trim();
 
     if (!handle) {
-      await SVXDialog.alert({ title: "Handle Required", message: "Please enter your poetic @handle." });
+      await SVXDialog.alert({ title: "Handle Required", message: "Please enter your @handle." });
       this.handleInput?.focus();
       return;
     }
@@ -1130,7 +1130,7 @@ export class SVXCommentModal {
         this.listEl.innerHTML = `
           <div class="svx-comment-empty-state">
             ${renderIcon('MessageCircle', 'svx-icon-lg')}
-            <span>Pehla alfaaz aapka ho sakta hai... Guftagu shuru karein.</span>
+            <span>No comments yet. Be the first to share your thoughts.</span>
           </div>
         `;
         return;
@@ -1225,7 +1225,7 @@ export class SVXCommentModal {
         this.countBadge.textContent = `${currentCount} comment${currentCount === 1 ? '' : 's'}`;
       }
       this.onCommentChange?.(this.currentShayariId, currentCount);
-      showToast("Alfaaz darj ho gaye!", "Check");
+      showToast("Comment posted!", "Check");
 
       try {
         if (this.sendBtn) this.sendBtn.disabled = true;
@@ -1284,7 +1284,7 @@ export class SVXCommentModal {
         this.listEl.innerHTML = `
           <div class="svx-comment-empty-state">
             ${renderIcon('MessageCircle', 'svx-icon-lg')}
-            <span>Pehla alfaaz aapka ho sakta hai... Guftagu shuru karein.</span>
+            <span>No comments yet. Be the first to share your thoughts.</span>
           </div>
         `;
       }
@@ -1971,7 +1971,7 @@ export class SVXProfileController {
 
         const ok = await SVXDialog.confirm({
           title: "Delete Shayari?",
-          message: "This piece of jazbaat will be permanently deleted from the universe.",
+          message: "Are you sure you want to delete this Shayari? This action cannot be undone.",
           confirmText: "Delete",
           isDanger: true
         });
@@ -2254,7 +2254,7 @@ export function initUI() {
         feedController?.prependCard(newShayari);
         router?.switchView('feed');
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        showToast("Naye jazbaat shaya ho gaye!", "Check");
+        showToast("Shayari published!", "Check");
       }
     },
     onOpenMusicPicker: () => {

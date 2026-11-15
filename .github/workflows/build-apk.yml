@@ -56,25 +56,24 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p build-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.1.2.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.1.3.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-Latest.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShayariVerse-X-v1.1.2-APK
-          path: build-artifacts/ShayariVerse-X-v1.1.2.apk
+          name: ShayariVerse-X-v1.1.3-APK
+          path: build-artifacts/ShayariVerse-X-v1.1.3.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.1.2
+      - name: Publish GitHub Release v1.1.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.1.2 --yes || true
-          gh release create v1.1.2 build-artifacts/ShayariVerse-X-v1.1.2.apk build-artifacts/ShayariVerse-X-Latest.apk \
-            --title "ShayariVerse X v1.1.2" \
-            --notes "### ShayariVerse X v1.1.2 Release Notes
-          - **Top-Layer Delete Confirmation Dialog**: Raised dialog overlay z-index to 3000, ensuring confirmation popups float above comment sheets without requiring sheets to be closed.
-          - **0ms Instant Comment Delete & Count Decrement**: Preserved target couplet IDs and added optimistic comment deletion with synchronized feed/profile card count decrements.
-          - **Full Keyboard Predictive Text & Emoji Access**: Enabled autocorrect, autocomplete, autocapitalize, and spellcheck across composer and comments, unlocking native keyboard word suggestions and full emoji palette freedom.
-          - **0ms Touch Latency Optimization**: Added touch-action manipulation across all buttons and navigation elements for crisp, native touch response."
+          gh release delete v1.1.3 --yes || true
+          gh release create v1.1.3 build-artifacts/ShayariVerse-X-v1.1.3.apk build-artifacts/ShayariVerse-X-Latest.apk \
+            --title "ShayariVerse X v1.1.3" \
+            --notes "### ShayariVerse X v1.1.3 Release Notes
+          - **Professional UI Copy Polish**: Replaced dramatic phrases with clean, modern English across deletion dialogs, toast feedback, and placeholders.
+          - **Clean Comment Experience**: Standardized comment drawer title to 'Comments', input placeholder to 'Write a comment...', and notification toast to 'Comment posted!'.
+          - **Intuitive Feedback & Composer**: Updated post publishing toast to 'Shayari published!' and enhanced empty state and live composer guidance."
