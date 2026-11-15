@@ -46,7 +46,7 @@ filesToCopy.forEach(file => {
   }
 });
 
-const dirsToCopy = ['js', 'lib', 'bgm'];
+const dirsToCopy = ['js', 'lib', 'bgm', 'assets'];
 dirsToCopy.forEach(dir => {
   const src = path.join(ROOT_DIR, dir);
   if (fs.existsSync(src)) {

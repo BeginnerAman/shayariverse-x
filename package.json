@@ -1,6 +1,6 @@
 {
   "name": "shayariverse-x",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ShayariVerse X — Dark Liquid Glassmorphism Social Shayari & Music Application",
   "type": "module",
   "main": "js/ui.js",

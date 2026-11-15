@@ -4,7 +4,7 @@
 export const CONFIG = {
   APP_NAME: 'ShayariVerse X',
   APP_SHORT: 'SVX',
-  VERSION: '1.0.0',
+  VERSION: '1.0.1',
 
   // Supabase (Dual-Mode Live Cloud DB)
   SUPABASE_URL: 'https://avkpoodioywyseuzeyhi.supabase.co',

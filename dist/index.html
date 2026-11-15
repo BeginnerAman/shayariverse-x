@@ -338,12 +338,12 @@
           <div id="svx-handle-suggestions" class="svx-suggestions-row"></div>
         </div>
 
-        <!-- 4-Digit Secret PIN -->
+        <!-- Secret PIN -->
         <div class="svx-auth-input-group">
-          <label class="svx-auth-label" for="svx-auth-pin">4-Digit Secret PIN (Recovery & Login)</label>
+          <label class="svx-auth-label" for="svx-auth-pin">Secret PIN (Recovery & Login)</label>
           <div class="svx-auth-input-wrap">
             <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <input id="svx-auth-pin" class="svx-auth-input svx-pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="current-password">
+            <input id="svx-auth-pin" class="svx-auth-input svx-pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="10" placeholder="••••••••" autocomplete="current-password">
           </div>
         </div>
 
@@ -482,7 +482,22 @@
     </div>
   </div>
 
-  <!-- 10. Global Toast Container (Phase 6) -->
+  <!-- 10. Custom Dark Glass Dialog Modal (Replaces browser confirm/alert) -->
+  <div id="svx-dialog-modal" class="svx-dialog-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="svx-dialog-card">
+      <div id="svx-dialog-icon-container" class="svx-dialog-icon-wrap">
+        <svg id="svx-dialog-icon" class="svx-icon" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+      </div>
+      <h3 id="svx-dialog-title" class="svx-dialog-title">Confirm Action</h3>
+      <p id="svx-dialog-desc" class="svx-dialog-desc">Are you sure you want to proceed?</p>
+      <div id="svx-dialog-actions" class="svx-dialog-actions">
+        <button id="svx-dialog-cancel-btn" class="svx-dialog-btn svx-dialog-btn-cancel" type="button">Cancel</button>
+        <button id="svx-dialog-confirm-btn" class="svx-dialog-btn svx-dialog-btn-danger" type="button">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. Global Toast Container (Phase 6) -->
   <div id="svx-toast-container" class="svx-toast-container" aria-live="polite"></div>
 
   <!-- Application Entry Point -->

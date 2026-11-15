@@ -118,14 +118,13 @@ ON CONFLICT (handle) DO NOTHING;
 -- ============================================================
 -- 8. SEED DATA: Pre-registered Founder Account (@aman)
 -- Pre-seeded with Founder Verified & Admin flags enabled
--- PIN hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 (empty string SHA-256)
--- Also accepted in client: 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4 (PIN: 1234)
+-- Founder Authentication Hash
 -- ============================================================
 INSERT INTO users (handle, display_name, bio, pin_hash, is_admin, is_verified) VALUES (
     'aman',
     'Aman',
     'Creator & Architect of ShayariVerse X. Code meets Jazbaat.',
-    'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    '0753faaf9103d45f2869d4a061f639ffb173dd37d97cbe627becd3d60ef13572',
     TRUE,
     TRUE
 )

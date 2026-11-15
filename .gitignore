@@ -4,6 +4,7 @@ node_modules/
 
 # Build outputs
 build-artifacts/
+release-apk/
 
 # OS and IDE files
 .DS_Store

@@ -341,6 +341,34 @@ export class SVXFeedController {
       const shayaris = await db.getFeed(this.page, CONFIG.FEED_PAGE_SIZE);
       this.container.innerHTML = '';
 
+      if (!shayaris || shayaris.length === 0) {
+        this.container.innerHTML = `
+          <div class="svx-glass-card mood-purple" style="text-align: center; padding: 48px 20px; margin-top: 16px;">
+            <div class="svx-placeholder-icon" style="margin: 0 auto 16px auto;">
+              ${renderIcon('Feather', 'svx-icon-lg')}
+            </div>
+            <h2 class="svx-placeholder-title" style="font-size: 20px; margin-bottom: 8px;">A Fresh Canvas Awaits</h2>
+            <p class="svx-placeholder-desc" style="max-width: 300px; margin: 0 auto 24px auto;">
+              No shayaris posted yet. Be the first to express your words with music.
+            </p>
+            <button class="svx-btn-post" id="svx-feed-empty-create-btn" type="button" style="margin: 0 auto; padding: 12px 24px; font-size: 14px;">
+              ${renderIcon('Plus', 'svx-icon-sm')}
+              <span>Compose First Shayari</span>
+            </button>
+          </div>
+        `;
+        const createBtn = document.getElementById('svx-feed-empty-create-btn');
+        createBtn?.addEventListener('click', () => {
+          if (this.composerModal) {
+            this.composerModal.open();
+          } else {
+            const router = typeof this.getRouter === 'function' ? this.getRouter() : this.getRouter;
+            router?.switchView('create');
+          }
+        });
+        return;
+      }
+
       const listWrapper = document.createElement('div');
       listWrapper.className = 'svx-feed-list';
 
@@ -424,7 +452,13 @@ export class SVXFeedController {
         const isGodMode = typeof localStorage !== 'undefined' && localStorage.getItem('svx_admin_god_mode') === 'true';
         const isAdmin = currentUser && (currentUser.is_admin || isGodMode);
 
-        if (confirm("Are you sure you want to delete this Shayari post?")) {
+        const ok = await SVXDialog.confirm({
+          title: "Delete Shayari?",
+          message: "This piece of jazbaat will be permanently removed.",
+          confirmText: "Delete",
+          isDanger: true
+        });
+        if (ok) {
           await db.deleteShayari(shayariId, currentUser?.id || '', isAdmin);
           card.style.transition = 'all 0.3s ease';
           card.style.opacity = '0';
@@ -845,13 +879,13 @@ export class SVXAuthModal {
     const pin = this.pinInput?.value.trim();
 
     if (!handle) {
-      alert("Please enter your @handle.");
+      await SVXDialog.alert({ title: "Handle Required", message: "Please enter your poetic @handle." });
       this.handleInput?.focus();
       return;
     }
 
-    if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-      alert("Please enter a valid 4-digit PIN (numbers only).");
+    if (!pin || pin.length < 4 || pin.length > 10 || !/^\d{4,10}$/.test(pin)) {
+      await SVXDialog.alert({ title: "PIN Required", message: "Please enter a valid secret PIN (4 to 10 numbers only)." });
       this.pinInput?.focus();
       return;
     }
@@ -864,7 +898,7 @@ export class SVXAuthModal {
       if (this.mode === 'register') {
         const displayName = this.displayNameInput?.value.trim();
         if (!displayName || displayName.length < 2) {
-          alert("Display name must be at least 2 characters.");
+          await SVXDialog.alert({ title: "Name Required", message: "Display name must be at least 2 characters." });
           this.displayNameInput?.focus();
           return;
         }
@@ -892,12 +926,12 @@ export class SVXAuthModal {
             action(user);
           }
         } else {
-          alert("Invalid @handle or 4-digit PIN. Please check and retry.");
+          await SVXDialog.alert({ title: "Login Failed", message: "Invalid @handle or secret PIN. Please check and retry." });
           this.pinInput?.focus();
         }
       }
     } catch (err) {
-      alert(err.message || "Authentication error.");
+      await SVXDialog.alert({ title: "Auth Error", message: err.message || "Authentication error." });
     } finally {
       if (this.submitBtn) this.submitBtn.disabled = false;
     }
@@ -1034,7 +1068,7 @@ export class SVXCommentModal {
         this.onCommentChange?.(this.currentShayariId, comments.length);
         showToast("Alfaaz darj ho gaye!", "Check");
       } catch (err) {
-        alert(err.message || "Failed to post comment.");
+        await SVXDialog.alert({ title: "Comment Failed", message: err.message || "Failed to post comment." });
       } finally {
         if (this.sendBtn) this.sendBtn.disabled = false;
       }
@@ -1053,7 +1087,14 @@ export class SVXCommentModal {
     const isGodMode = typeof localStorage !== 'undefined' && localStorage.getItem('svx_admin_god_mode') === 'true';
     const isAdmin = currentUser && (currentUser.is_admin || isGodMode);
 
-    if (confirm("Are you sure you want to delete this comment?")) {
+    const ok = await SVXDialog.confirm({
+      title: "Delete Comment?",
+      message: "Are you sure you want to delete this comment?",
+      confirmText: "Delete",
+      isDanger: true
+    });
+
+    if (ok) {
       try {
         await db.deleteComment(commentId, currentUser?.id || '', isAdmin);
         await this.loadComments();
@@ -1061,8 +1102,87 @@ export class SVXCommentModal {
         this.onCommentChange?.(this.currentShayariId, comments.length);
         showToast("Comment deleted.", "Trash2");
       } catch (err) {
-        alert(err.message || "Failed to delete comment.");
+        await SVXDialog.alert({ title: "Delete Failed", message: err.message || "Failed to delete comment." });
       }
+    }
+  }
+}
+
+/* 7b. Custom Dark Glass Dialog Modal (Replaces browser confirm & alert) */
+export class SVXDialog {
+  static modal = null;
+  static iconContainer = null;
+  static iconEl = null;
+  static titleEl = null;
+  static descEl = null;
+  static cancelBtn = null;
+  static confirmBtn = null;
+  static activeResolver = null;
+
+  static init() {
+    this.modal = document.getElementById('svx-dialog-modal');
+    this.iconContainer = document.getElementById('svx-dialog-icon-container');
+    this.iconEl = document.getElementById('svx-dialog-icon');
+    this.titleEl = document.getElementById('svx-dialog-title');
+    this.descEl = document.getElementById('svx-dialog-desc');
+    this.cancelBtn = document.getElementById('svx-dialog-cancel-btn');
+    this.confirmBtn = document.getElementById('svx-dialog-confirm-btn');
+
+    this.cancelBtn?.addEventListener('click', () => this.close(false));
+    this.confirmBtn?.addEventListener('click', () => this.close(true));
+    this.modal?.addEventListener('click', (e) => {
+      if (e.target === this.modal) this.close(false);
+    });
+  }
+
+  static confirm({ title = 'Confirm Action', message = 'Are you sure?', confirmText = 'Confirm', cancelText = 'Cancel', isDanger = true } = {}) {
+    if (!this.modal) this.init();
+    return new Promise((resolve) => {
+      this.activeResolver = resolve;
+      if (this.titleEl) this.titleEl.textContent = title;
+      if (this.descEl) this.descEl.textContent = message;
+      if (this.cancelBtn) {
+        this.cancelBtn.textContent = cancelText;
+        this.cancelBtn.style.display = 'block';
+      }
+      if (this.confirmBtn) {
+        this.confirmBtn.textContent = confirmText;
+        this.confirmBtn.className = isDanger ? 'svx-dialog-btn svx-dialog-btn-danger' : 'svx-dialog-btn svx-dialog-btn-confirm';
+      }
+      if (this.iconContainer) {
+        this.iconContainer.className = isDanger ? 'svx-dialog-icon-wrap' : 'svx-dialog-icon-wrap info';
+      }
+      this.modal?.classList.add('open', 'active');
+    });
+  }
+
+  static alert({ title = 'Notice', message = '', buttonText = 'OK' } = {}) {
+    if (!this.modal) this.init();
+    return new Promise((resolve) => {
+      this.activeResolver = resolve;
+      if (this.titleEl) this.titleEl.textContent = title;
+      if (this.descEl) this.descEl.textContent = message;
+      if (this.cancelBtn) {
+        this.cancelBtn.style.display = 'none';
+      }
+      if (this.confirmBtn) {
+        this.confirmBtn.textContent = buttonText;
+        this.confirmBtn.className = 'svx-dialog-btn svx-dialog-btn-confirm';
+      }
+      if (this.iconContainer) {
+        this.iconContainer.className = 'svx-dialog-icon-wrap info';
+      }
+      this.modal?.classList.add('open', 'active');
+    });
+  }
+
+  static close(result) {
+    if (this.modal) {
+      this.modal.classList.remove('open', 'active');
+    }
+    if (this.activeResolver) {
+      this.activeResolver(result);
+      this.activeResolver = null;
     }
   }
 }
@@ -1106,12 +1226,12 @@ export class SVXEditProfileModal {
       this.bioInput.value = user.bio || '';
       if (this.bioCharCount) this.bioCharCount.textContent = `${(user.bio || '').length}/150`;
     }
-    this.modal.classList.add('open');
+    this.modal.classList.add('open', 'active');
   }
 
   close() {
     if (!this.modal) return;
-    this.modal.classList.remove('open');
+    this.modal.classList.remove('open', 'active');
     this.currentUser = null;
   }
 
@@ -1121,13 +1241,13 @@ export class SVXEditProfileModal {
     const bio = this.bioInput?.value.trim();
 
     if (!name || name.length < 2) {
-      alert("Display name must be at least 2 characters.");
+      await SVXDialog.alert({ title: "Name Required", message: "Display name must be at least 2 characters." });
       this.nameInput?.focus();
       return;
     }
 
     if (bio && bio.length > 150) {
-      alert("Bio cannot exceed 150 characters.");
+      await SVXDialog.alert({ title: "Bio Too Long", message: "Bio cannot exceed 150 characters." });
       this.bioInput?.focus();
       return;
     }
@@ -1142,7 +1262,7 @@ export class SVXEditProfileModal {
       this.close();
       this.onSaveSuccess?.(updated);
     } catch (err) {
-      alert(err.message || "Failed to update profile.");
+      await SVXDialog.alert({ title: "Update Failed", message: err.message || "Failed to update profile." });
     } finally {
       if (this.saveBtn) this.saveBtn.disabled = false;
     }
@@ -1578,7 +1698,14 @@ export class SVXProfileController {
         const isGodMode = typeof localStorage !== 'undefined' && localStorage.getItem('svx_admin_god_mode') === 'true';
         const isAdmin = currentUser && (currentUser.is_admin || isGodMode);
 
-        if (confirm("Are you sure you want to delete this Shayari post?")) {
+        const ok = await SVXDialog.confirm({
+          title: "Delete Shayari?",
+          message: "This piece of jazbaat will be permanently deleted from the universe.",
+          confirmText: "Delete",
+          isDanger: true
+        });
+
+        if (ok) {
           await db.deleteShayari(shayariId, currentUser?.id || '', isAdmin);
           card.style.transition = 'all 0.3s ease';
           card.style.opacity = '0';
@@ -1615,7 +1742,10 @@ export class SVXProfileController {
   async triggerAdminGodMode() {
     const user = db.getCurrentUser();
     if (!user || user.handle !== CONFIG.FOUNDER_HANDLE) {
-      alert("Admin God-Mode is reserved for Founder @aman. Please login as @aman with your secret PIN.");
+      await SVXDialog.alert({
+        title: "Founder Access Only",
+        message: "Admin God-Mode is reserved for Founder @aman. Please login as @aman with your secret PIN."
+      });
       if (this.onAuthRequested) {
         this.onAuthRequested(CONFIG.FOUNDER_HANDLE);
       }
@@ -1689,6 +1819,7 @@ export class SVXRouter {
     });
 
     if (viewName === 'profile' && this.profileController) {
+      this.profileController.viewingHandle = null;
       this.profileController.render();
     }
 

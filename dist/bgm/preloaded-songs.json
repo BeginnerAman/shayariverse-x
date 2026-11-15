@@ -1,84 +1,193 @@
 {
-  "version": 1,
+  "version": 2,
+  "source": "ShayariVerse Official Original Audio Engine",
   "categories": [
     {
-      "id": "slowed-reverb",
-      "name": "Slowed + Reverb",
+      "id": "sukoon-calm",
+      "name": "Sukoon & Calm",
       "icon": "Disc",
       "tracks": [
         {
-          "id": "sr-001",
-          "name": "Tum Hi Ho (Slowed + Reverb)",
-          "artist": "Arijit Singh",
-          "file": "slowed-reverb-tum-hi-ho.mp3",
-          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/slowed-reverb-tum-hi-ho.mp3",
-          "duration": 210,
+          "id": "track-1",
+          "name": "Soulful Melody",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-1.mp3",
+          "duration": 18,
+          "mood": "calm",
           "art": null
         },
         {
-          "id": "sr-002",
-          "name": "Faasle (Slowed + Reverb)",
-          "artist": "Aditya Rikhari",
-          "file": "faasle-slowed.mp3",
-          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/faasle-slowed.mp3",
-          "duration": 185,
-          "art": null
-        }
-      ]
-    },
-    {
-      "id": "sad-flute",
-      "name": "Sad Flute & Violin",
-      "icon": "Music",
-      "tracks": [
-        {
-          "id": "sf-001",
-          "name": "Raataan Lambiyan (Sad Flute)",
-          "artist": "Jubin Nautiyal",
-          "file": "raataan-lambiyan-flute.mp3",
-          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/raataan-lambiyan-flute.mp3",
-          "duration": 160,
-          "art": null
-        }
-      ]
-    },
-    {
-      "id": "lofi-night",
-      "name": "Late Night Lofi",
-      "icon": "Disc",
-      "tracks": [
-        {
-          "id": "ln-001",
-          "name": "Kesariya (Lofi Chill)",
-          "artist": "Pritam & Arijit Singh",
-          "file": "kesariya-lofi.mp3",
-          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/kesariya-lofi.mp3",
-          "duration": 195,
+          "id": "track-8",
+          "name": "Sufi Sukoon",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-8.mp3",
+          "duration": 18,
+          "mood": "calm",
           "art": null
         },
         {
-          "id": "ln-002",
-          "name": "Pee Loon (Late Night Lofi)",
-          "artist": "Mohit Chauhan",
-          "file": "pee-loon-lofi.mp3",
-          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/pee-loon-lofi.mp3",
-          "duration": 220,
+          "id": "track-11",
+          "name": "Ruhani Ehsaas",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-11.mp3",
+          "duration": 21,
+          "mood": "calm",
+          "art": null
+        },
+        {
+          "id": "track-3",
+          "name": "Evening Breeze",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-3.mp3",
+          "duration": 15,
+          "mood": "romantic",
           "art": null
         }
       ]
     },
     {
-      "id": "royal-urdu",
-      "name": "Royal Urdu Vibe",
-      "icon": "Crown",
+      "id": "romantic-jazbaat",
+      "name": "Romantic Jazbaat",
+      "icon": "Heart",
       "tracks": [
         {
-          "id": "ru-001",
-          "name": "Tajdar-e-Haram (Acoustic Sarangi)",
-          "artist": "Atif Aslam",
-          "file": "tajdar-e-haram-acoustic.mp3",
-          "url": "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/tajdar-e-haram-acoustic.mp3",
-          "duration": 240,
+          "id": "track-4",
+          "name": "Noor-e-Khwaab",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-4.mp3",
+          "duration": 20,
+          "mood": "romantic",
+          "art": null
+        },
+        {
+          "id": "track-12",
+          "name": "Jazbaat",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-12.mp3",
+          "duration": 25,
+          "mood": "romantic",
+          "art": null
+        },
+        {
+          "id": "track-14",
+          "name": "Khwaab-e-Ishq",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-14.mp3",
+          "duration": 15,
+          "mood": "romantic",
+          "art": null
+        },
+        {
+          "id": "track-15",
+          "name": "Dheeme Ehsaas",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-15.mp3",
+          "duration": 16,
+          "mood": "romantic",
+          "art": null
+        },
+        {
+          "id": "track-16",
+          "name": "Pehla Pyaar",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-16.mp3",
+          "duration": 22,
+          "mood": "love",
+          "art": null
+        },
+        {
+          "id": "track-17",
+          "name": "Dil Ka Aalam",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-17.mp3",
+          "duration": 18,
+          "mood": "romantic",
+          "art": null
+        },
+        {
+          "id": "track-9",
+          "name": "Dil Ki Aawaz",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-9.mp3",
+          "duration": 15,
+          "mood": "love",
+          "art": null
+        }
+      ]
+    },
+    {
+      "id": "dard-melancholy",
+      "name": "Dard & Tanhai",
+      "icon": "CloudRain",
+      "tracks": [
+        {
+          "id": "track-2",
+          "name": "Rainy Nostalgia",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-2.mp3",
+          "duration": 16,
+          "mood": "melancholic",
+          "art": null
+        },
+        {
+          "id": "track-6",
+          "name": "Khamoshi Ki Dastaan",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-6.mp3",
+          "duration": 25,
+          "mood": "sad",
+          "art": null
+        },
+        {
+          "id": "track-7",
+          "name": "Yaadon Ka Karwaan",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-7.mp3",
+          "duration": 25,
+          "mood": "melancholic",
+          "art": null
+        },
+        {
+          "id": "track-10",
+          "name": "Kismat Ki Judai",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-10.mp3",
+          "duration": 12,
+          "mood": "sad",
+          "art": null
+        },
+        {
+          "id": "track-18",
+          "name": "Tanhai Ka Noor",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-18.mp3",
+          "duration": 15,
+          "mood": "romantic",
+          "art": null
+        }
+      ]
+    },
+    {
+      "id": "zindagi-dosti",
+      "name": "Zindagi & Dosti",
+      "icon": "Sparkles",
+      "tracks": [
+        {
+          "id": "track-5",
+          "name": "Zindagi Ka Safar",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-5.mp3",
+          "duration": 15,
+          "mood": "motivational",
+          "art": null
+        },
+        {
+          "id": "track-13",
+          "name": "Dosti Ka Tarana",
+          "artist": "ShayariVerse",
+          "url": "https://beginneraman.github.io/ShayariVerse/content/audio/background/track-13.mp3",
+          "duration": 9,
+          "mood": "dosti",
           "art": null
         }
       ]

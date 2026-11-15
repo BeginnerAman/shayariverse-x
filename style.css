@@ -420,19 +420,27 @@ html, body {
 
 .svx-nav-item.active .svx-icon {
   color: var(--svx-accent-cyan);
-  filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.6));
+  filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.7));
+  transform: translateY(-1px);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
 }
 
-/* Active indicator dot */
-.svx-nav-item.active::after {
+/* Modern Top Ambient Indicator Bar (Replaces old awkward dot) */
+.svx-nav-item.active::before {
   content: '';
   position: absolute;
-  bottom: 6px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--svx-accent-cyan);
-  box-shadow: 0 0 6px var(--svx-accent-cyan);
+  top: 0;
+  width: 28px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--svx-accent-cyan), var(--svx-accent-purple));
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.8), 0 0 18px rgba(138, 43, 226, 0.5);
+  animation: svx-nav-accent-glow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes svx-nav-accent-glow {
+  0% { transform: scaleX(0); opacity: 0; }
+  100% { transform: scaleX(1); opacity: 1; }
 }
 
 /* Elevated + Create Button */
@@ -872,7 +880,8 @@ html, body {
   flex-direction: column;
 }
 
-.svx-modal-overlay.active {
+.svx-modal-overlay.active,
+.svx-modal-overlay.open {
   opacity: 1;
   pointer-events: auto;
 }
@@ -2226,8 +2235,153 @@ html, body {
   .svx-heart-burst-icon,
   .svx-modal-overlay,
   .svx-skeleton-track,
-  .svx-auth-sheet {
+  .svx-auth-sheet,
+  .svx-dialog-overlay {
     animation: none !important;
     transition: none !important;
   }
 }
+
+/* 19. Custom Dark Glass Dialog Modal (Replaces ugly browser/Android confirm & alert) */
+.svx-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 6, 12, 0.85);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.svx-dialog-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.svx-dialog-card {
+  width: 100%;
+  max-width: 360px;
+  background: linear-gradient(135deg, rgba(26, 26, 42, 0.92), rgba(16, 16, 26, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  padding: 24px 20px 20px 20px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(138, 43, 226, 0.2);
+  transform: scale(0.92) translateY(10px);
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.svx-dialog-overlay.open .svx-dialog-card {
+  transform: scale(1) translateY(0);
+}
+
+.svx-dialog-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+  background: rgba(244, 67, 54, 0.12);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  color: #ff5252;
+  box-shadow: 0 0 20px rgba(244, 67, 54, 0.35);
+}
+
+.svx-dialog-icon-wrap.info {
+  background: rgba(0, 210, 255, 0.12);
+  border-color: rgba(0, 210, 255, 0.3);
+  color: var(--svx-accent-cyan);
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.35);
+}
+
+.svx-dialog-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--svx-text-primary);
+  margin: 0 0 8px 0;
+  font-family: var(--svx-font-primary);
+}
+
+.svx-dialog-desc {
+  font-size: 13.5px;
+  color: var(--svx-text-muted);
+  line-height: 1.5;
+  margin: 0 0 22px 0;
+  font-family: var(--svx-font-primary);
+}
+
+.svx-dialog-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.svx-dialog-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--svx-font-primary);
+  transition: transform 0.15s ease, filter 0.15s ease;
+  touch-action: manipulation;
+}
+
+.svx-dialog-btn:active {
+  transform: scale(0.96);
+}
+
+.svx-dialog-btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--svx-text-secondary);
+}
+
+.svx-dialog-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.svx-dialog-btn-danger {
+  background: linear-gradient(135deg, #f44336, #e91e63);
+  border: none;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(244, 67, 54, 0.45);
+}
+
+.svx-dialog-btn-confirm {
+  background: linear-gradient(135deg, var(--svx-accent-purple), var(--svx-accent-cyan));
+  border: none;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(138, 43, 226, 0.45);
+}
+
+/* 20. Buttery Smooth Hardware Acceleration & Touch Optimization */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-btn-comment {
+  touch-action: manipulation;
+}
+
+.svx-main-viewport,
+.svx-view-section,
+.svx-feed-container,
+.svx-author-shayari-list {
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+

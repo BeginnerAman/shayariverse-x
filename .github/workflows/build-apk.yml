@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     name: Build ShayariVerse X APK
@@ -32,9 +35,11 @@ jobs:
       - name: Build Web Assets into dist/
         run: npm run build
 
-      - name: Add Android Platform via Capacitor
+      - name: Add Android Platform & Generate Brand Icons
         run: |
           npx cap add android || echo "Android platform already added."
+          npm install -D sharp
+          node scripts/generate-icons.js
           npx cap sync android
 
       - name: Build Debug APK with Gradle
@@ -46,11 +51,28 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p build-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.0.0.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.0.1.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShayariVerse-X-v1.0.0-APK
-          path: build-artifacts/ShayariVerse-X-v1.0.0.apk
+          name: ShayariVerse-X-v1.0.1-APK
+          path: build-artifacts/ShayariVerse-X-v1.0.1.apk
           retention-days: 30
+
+      - name: Publish GitHub Release v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete v1.0.1 --yes || true
+          gh release create v1.0.1 build-artifacts/ShayariVerse-X-v1.0.1.apk \
+            --title "ShayariVerse X v1.0.1" \
+            --notes "### ShayariVerse X v1.0.1 Release Notes
+          - **Edit Profile Fixed**: Resolved class active/open mismatch so Display Name & Poetic Bio update instantly.
+          - **Bottom Nav Redesigned**: Removed awkward bottom dot indicator and replaced with sleek glowing ambient top bar.
+          - **Custom Dark Glass Dialogs**: Eliminated all ugly Android OS system alerts/confirm boxes with custom liquid-glass SVXDialog.
+          - **18 Authentic BGMs**: Fully integrated real background audio from BeginnerAman/ShayariVerse repo across 4 moods.
+          - **Pristine Feed**: Cleared all test/junk posts for a 100% clean, fresh start.
+          - **Profile Reset Bug Fixed**: Tapping the Profile tab always opens the current user's own profile.
+          - **Brand Star App Icon**: Generated launcher icons with the glowing 4-point star brand mark SVG.
+          - **Founder PIN Upgraded**: Set custom secret PIN for @aman."

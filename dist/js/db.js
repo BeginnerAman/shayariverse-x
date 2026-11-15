@@ -30,139 +30,19 @@ export async function hashPin(pin) {
 // Pre-seeded demo dataset with verified Founder @aman post
 const DEMO_USERS = [
   {
-    id: "founder-aman-001",
+    id: "b8c2a9a4-149d-489d-9396-a4b95a7e6058",
     handle: "aman",
     display_name: "Aman",
     bio: "Creator & Architect of ShayariVerse X. Code meets Jazbaat.",
-    pin_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    pin_hash: "0753faaf9103d45f2869d4a061f639ffb173dd37d97cbe627becd3d60ef13572",
     is_admin: true,
     is_verified: true,
     created_at: "2026-01-01T00:00:00.000Z"
-  },
-  {
-    id: "user-kabir-002",
-    handle: "kabir_writes",
-    display_name: "Kabir",
-    bio: "Tanhaiyon ka musafir. Poetry is the language of wounded souls.",
-    pin_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    is_admin: false,
-    is_verified: false,
-    created_at: "2026-03-12T11:20:00.000Z"
-  },
-  {
-    id: "user-noor-003",
-    handle: "noor_e_sukhan",
-    display_name: "Noor",
-    bio: "Alfaaz jo dil ko chhoo jayein. Late night ghazals & tea.",
-    pin_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    is_admin: false,
-    is_verified: false,
-    created_at: "2026-05-18T16:45:00.000Z"
-  },
-  {
-    id: "user-sahir-004",
-    handle: "sahir_alfaaz",
-    display_name: "Sahir",
-    bio: "Purani yaadein, naye geet. Words from the heart.",
-    pin_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    is_admin: false,
-    is_verified: false,
-    created_at: "2026-08-04T09:15:00.000Z"
-  },
-  {
-    id: "user-zoya-005",
-    handle: "zoya_shayari",
-    display_name: "Zoya",
-    bio: "Dard aur umeed ki dastaan. Exploring the depth of Urdu poetry.",
-    pin_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    is_admin: false,
-    is_verified: false,
-    created_at: "2026-09-22T21:30:00.000Z"
   }
 ];
 
-const DEMO_SHAYARIS = [
-  {
-    id: "shayari-founder-001",
-    user_id: "founder-aman-001",
-    content: "Zindagi mein kuch log aise aate hain\nJo dil ke har zakham pe marham lagate hain\n\nUnke jaane ke baad bhi ehsaas rehta hai\nWo yaadein hi toh hain jo hamesha saath nibhaate hain",
-    formatted: "Zindagi mein kuch log aise aate hain\nJo dil ke har zakham pe marham lagate hain\n\nUnke jaane ke baad bhi ehsaas rehta hai\nWo yaadein hi toh hain jo hamesha saath nibhaate hain",
-    mood_theme: "purple",
-    font_style: "nastaliq",
-    song_name: "Tum Hi Ho (Slowed + Reverb)",
-    song_artist: "Arijit Singh",
-    song_url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/slowed-reverb-tum-hi-ho.mp3",
-    song_art: null,
-    song_source: "cdn",
-    likes_count: 84,
-    comments_count: 6,
-    created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString() // 25 mins ago
-  },
-  {
-    id: "shayari-kabir-002",
-    user_id: "user-kabir-002",
-    content: "Khamoshiyon mein bhi ek ajeeb sa shor hai\nHar mod par lagta hai koyi apna or hai\n\nHumne to manga tha bas ek katra sukoon ka\nYahan to har taraf bikhra dard ka dor hai",
-    formatted: "Khamoshiyon mein bhi ek ajeeb sa shor hai\nHar mod par lagta hai koyi apna or hai\n\nHumne to manga tha bas ek katra sukoon ka\nYahan to har taraf bikhra dard ka dor hai",
-    mood_theme: "cyan",
-    font_style: "elegant",
-    song_name: "Kesariya (Lofi Chill)",
-    song_artist: "Pritam & Arijit Singh",
-    song_url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/kesariya-lofi.mp3",
-    song_art: null,
-    song_source: "cdn",
-    likes_count: 47,
-    comments_count: 3,
-    created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString() // 3 hours ago
-  },
-  {
-    id: "shayari-noor-003",
-    user_id: "user-noor-003",
-    content: "Kabhi be-sabab kabhi be-parda muskura dete hain\nHum apne aansuon ko mehmaan bana lete hain\n\nKaun poochhta hai is jahan mein haal kisi ka\nHum khud hi khud ko gale se laga lete hain",
-    formatted: "Kabhi be-sabab kabhi be-parda muskura dete hain\nHum apne aansuon ko mehmaan bana lete hain\n\nKaun poochhta hai is jahan mein haal kisi ka\nHum khud hi khud ko gale se laga lete hain",
-    mood_theme: "rose",
-    font_style: "nastaliq",
-    song_name: "Faasle (Slowed + Reverb)",
-    song_artist: "Aditya Rikhari",
-    song_url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/faasle-slowed.mp3",
-    song_art: null,
-    song_source: "cdn",
-    likes_count: 62,
-    comments_count: 4,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString() // 8 hours ago
-  },
-  {
-    id: "shayari-sahir-004",
-    user_id: "user-sahir-004",
-    content: "Raat dhal jaati hai par yaadein nahi dhalti\nTere bina rooh ki pyas kabhi nahi bujhti\n\nLikhe the jo alfaaz tere naam ke kaagaz par\nUn lafzon ki khushboo sadiyon tak nahi mit-ti",
-    formatted: "Raat dhal jaati hai par yaadein nahi dhalti\nTere bina rooh ki pyas kabhi nahi bujhti\n\nLikhe the jo alfaaz tere naam ke kaagaz par\nUn lafzon ki khushboo sadiyon tak nahi mit-ti",
-    mood_theme: "amber",
-    font_style: "clean",
-    song_name: "Pee Loon (Late Night Lofi)",
-    song_artist: "Mohit Chauhan",
-    song_url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/pee-loon-lofi.mp3",
-    song_art: null,
-    song_source: "cdn",
-    likes_count: 35,
-    comments_count: 2,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
-  },
-  {
-    id: "shayari-zoya-005",
-    user_id: "user-zoya-005",
-    content: "Chand bhi tanha hai sitaron ke darmiyan\nJaise hum hain bheed mein yaadon ke darmiyan\n\nEk lamha jo thehar jaye to qayamat hogi\nSafar jari hai abhi umeedon ke darmiyan",
-    formatted: "Chand bhi tanha hai sitaron ke darmiyan\nJaise hum hain bheed mein yaadon ke darmiyan\n\nEk lamha jo thehar jaye to qayamat hogi\nSafar jari hai abhi umeedon ke darmiyan",
-    mood_theme: "purple",
-    font_style: "nastaliq",
-    song_name: "Raataan Lambiyan (Sad Flute)",
-    song_artist: "Jubin Nautiyal",
-    song_url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/raataan-lambiyan-flute.mp3",
-    song_art: null,
-    song_source: "cdn",
-    likes_count: 53,
-    comments_count: 5,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() // 2 days ago
-  }
-];
+const DEMO_SHAYARIS = [];
+const DEMO_COMMENTS = [];
 
 export class LocalStorageDB {
   constructor() {
@@ -342,9 +222,7 @@ export class LocalStorageDB {
     const user = await this.getUserByHandle(handle);
     if (!user) return null;
     const validFounderHashes = [
-      'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-      '9af15b336e6a9619928537df30b2e6a2376569fcf9d7e773eccede65606529a0', // 0000
-      '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'  // 1234
+      '0753faaf9103d45f2869d4a061f639ffb173dd37d97cbe627becd3d60ef13572'
     ];
     if (user.pin_hash === pinHash || (user.handle === 'aman' && validFounderHashes.includes(pinHash))) {
       this.setCurrentUser(user);
@@ -771,9 +649,7 @@ export class SupabaseDB {
     const user = await this.getUserByHandle(handle);
     if (!user) return null;
     const validFounderHashes = [
-      'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-      '9af15b336e6a9619928537df30b2e6a2376569fcf9d7e773eccede65606529a0',
-      '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'
+      '0753faaf9103d45f2869d4a061f639ffb173dd37d97cbe627becd3d60ef13572'
     ];
     if (user.pin_hash === pinHash || (user.handle === 'aman' && validFounderHashes.includes(pinHash))) {
       this.setCurrentUser(user);
