@@ -54,31 +54,35 @@
 
     <!-- View: Feed (Active Default) -->
     <section id="svx-view-feed" class="svx-view-section active" aria-label="Shayari Feed">
-      <div class="svx-glass-card mood-purple">
-        <div class="svx-placeholder-state">
-          <div class="svx-placeholder-icon">
-            <svg class="svx-icon svx-icon-lg" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-          </div>
-          <h2 class="svx-placeholder-title">Core Shell Loaded</h2>
-          <p class="svx-placeholder-desc">
-            Phase 1 is active with Dark Liquid Glassmorphism, Ambient Orbs, and strict Lucide SVG icon engine. Ready for Phase 2 Feed Cards.
-          </p>
+      <div class="svx-glass-card mood-purple" style="text-align: center; padding: 48px 20px; margin-top: 16px;">
+        <div class="svx-placeholder-icon" style="margin: 0 auto 16px auto;">
+          <svg class="svx-icon svx-icon-lg" viewBox="0 0 24 24"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
         </div>
+        <h2 class="svx-placeholder-title" style="font-size: 20px; margin-bottom: 8px;">A Fresh Canvas Awaits</h2>
+        <p class="svx-placeholder-desc" style="max-width: 300px; margin: 0 auto 24px auto;">
+          No shayaris posted yet. Be the first to express your words with music.
+        </p>
+        <button class="svx-btn-post" id="svx-feed-empty-create-btn" type="button" style="margin: 0 auto; padding: 12px 24px; font-size: 14px;">
+          <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Compose First Shayari</span>
+        </button>
       </div>
     </section>
 
     <!-- View: Create Composer -->
     <section id="svx-view-create" class="svx-view-section" aria-label="Create Shayari">
-      <div class="svx-glass-card mood-cyan">
-        <div class="svx-placeholder-state">
-          <div class="svx-placeholder-icon">
-            <svg class="svx-icon svx-icon-lg" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </div>
-          <h2 class="svx-placeholder-title">Smart Shayari Composer</h2>
-          <p class="svx-placeholder-desc">
-            Auto-Format Engine, Auto-Fit dynamic font scaling, and Glass Mood Theme picker will be activated here in Phase 3.
-          </p>
+      <div class="svx-glass-card mood-purple" style="text-align: center; padding: 48px 20px; margin-top: 16px;">
+        <div class="svx-placeholder-icon" style="margin: 0 auto 16px auto;">
+          <svg class="svx-icon svx-icon-lg" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </div>
+        <h2 class="svx-placeholder-title" style="font-size: 20px; margin-bottom: 8px;">Express Your Jazbaat</h2>
+        <p class="svx-placeholder-desc" style="max-width: 300px; margin: 0 auto 24px auto;">
+          Tap below or use the bottom navigation + button to compose your poetic masterpiece.
+        </p>
+        <button class="svx-btn-post" id="svx-create-view-open-btn" type="button" style="margin: 0 auto; padding: 12px 24px; font-size: 14px;">
+          <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
+          <span>Open Composer</span>
+        </button>
       </div>
     </section>
 
@@ -424,8 +428,8 @@
             <span>Poetic Bio</span>
             <span id="svx-bio-char-count" style="color: var(--svx-text-muted); font-size: 11px;">0/150</span>
           </label>
-          <div class="svx-auth-input-wrap" style="height: auto; padding: 4px;">
-            <textarea id="svx-edit-bio" class="svx-composer-textarea" rows="3" maxlength="150" placeholder="Apne baare mein kuch lafz... (max 150 chars)" style="min-height: 80px;"></textarea>
+          <div class="svx-edit-bio-wrap">
+            <textarea id="svx-edit-bio" class="svx-edit-bio-textarea" rows="3" maxlength="150" placeholder="Apne baare mein kuch lafz... (max 150 chars)"></textarea>
           </div>
         </div>
       </div>

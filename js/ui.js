@@ -463,7 +463,13 @@ export class SVXFeedController {
           card.style.transition = 'all 0.3s ease';
           card.style.opacity = '0';
           card.style.transform = 'scale(0.92)';
-          setTimeout(() => card.remove(), 300);
+          setTimeout(() => {
+            card.remove();
+            const remaining = listWrapper.querySelectorAll('.svx-feed-card');
+            if (remaining.length === 0) {
+              this.loadFeed();
+            }
+          }, 300);
           showToast("Shayari post deleted.", "Trash2");
         }
       } else if (action === 'share' && shayariId) {
@@ -1187,6 +1193,61 @@ export class SVXDialog {
   }
 }
 
+/* 7c. In-App Update Checker (Option A) */
+export class SVXUpdateChecker {
+  static async checkForUpdates(isManual = false) {
+    try {
+      const res = await fetch('https://api.github.com/repos/BeginnerAman/shayariverse-x/releases/latest', {
+        headers: { 'Accept': 'application/vnd.github.v3+json' }
+      });
+      if (!res.ok) {
+        if (isManual) showToast("Could not reach update server.", "AlertCircle");
+        return;
+      }
+      const release = await res.json();
+      const latestTag = release.tag_name || '';
+      const latestVersion = latestTag.replace(/^v/, '').trim();
+      const currentVersion = CONFIG.VERSION.replace(/^v/, '').trim();
+
+      if (this.isNewer(latestVersion, currentVersion)) {
+        const apkAsset = release.assets?.find(a => a.name.endsWith('.apk')) || release.assets?.[0];
+        const downloadUrl = apkAsset?.browser_download_url || release.html_url;
+
+        const updateNow = await SVXDialog.confirm({
+          title: `Update Ready! (v${latestVersion})`,
+          message: `ShayariVerse X v${latestVersion} is available with fixes and enhancements. Tap "Update Now" to download.`,
+          confirmText: "Update Now",
+          cancelText: "Later",
+          isDanger: false
+        });
+
+        if (updateNow && downloadUrl) {
+          window.open(downloadUrl, '_system');
+        }
+      } else if (isManual) {
+        showToast(`You have the latest version (v${CONFIG.VERSION})`, "Check");
+      }
+    } catch (err) {
+      console.warn('[SVX Update] Check error:', err);
+      if (isManual) {
+        showToast("Unable to check for updates right now.", "AlertCircle");
+      }
+    }
+  }
+
+  static isNewer(latest, current) {
+    const lParts = latest.split('.').map(Number);
+    const cParts = current.split('.').map(Number);
+    for (let i = 0; i < Math.max(lParts.length, cParts.length); i++) {
+      const l = lParts[i] || 0;
+      const c = cParts[i] || 0;
+      if (l > c) return true;
+      if (l < c) return false;
+    }
+    return false;
+  }
+}
+
 /* 8. Edit Profile Modal (Phase 6) */
 export class SVXEditProfileModal {
   constructor(options = {}) {
@@ -1580,8 +1641,12 @@ export class SVXProfileController {
             <span>Log Out</span>
           </button>
 
-          <div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
             <span id="svx-secret-version-tag" class="svx-version-tag">ShayariVerse X v${CONFIG.VERSION}</span>
+            <button id="svx-profile-check-update-btn" type="button" style="background: none; border: none; color: var(--svx-accent-cyan); font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 5px; opacity: 0.85; padding: 4px 10px;">
+              ${renderIcon('Sparkles', 'svx-icon-sm')}
+              <span>Check for Updates</span>
+            </button>
           </div>
         </div>
 
@@ -1612,6 +1677,11 @@ export class SVXProfileController {
         this.bindCardEvents(listContainer);
       }
     }
+
+    const checkUpdateBtn = document.getElementById('svx-profile-check-update-btn');
+    checkUpdateBtn?.addEventListener('click', () => {
+      SVXUpdateChecker.checkForUpdates(true);
+    });
 
     const logoutBtn = document.getElementById('svx-profile-logout-btn');
     logoutBtn?.addEventListener('click', () => {
@@ -1925,6 +1995,11 @@ export function initUI() {
 
   // 9. Initialize Router
   router = new SVXRouter(composerModal, authModal, profileController);
+
+  // 10. Background In-App Update Check (Option A)
+  setTimeout(() => {
+    SVXUpdateChecker.checkForUpdates(false);
+  }, 2500);
 
   return {
     router,

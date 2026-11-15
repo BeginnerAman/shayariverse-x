@@ -420,21 +420,21 @@ html, body {
 
 .svx-nav-item.active .svx-icon {
   color: var(--svx-accent-cyan);
-  filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.7));
-  transform: translateY(-1px);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
+  filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.75));
+  transform: translateY(-2px) scale(1.06);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), filter 0.22s ease;
 }
 
-/* Modern Top Ambient Indicator Bar (Replaces old awkward dot) */
+/* Modern Top Ambient Indicator Bar */
 .svx-nav-item.active::before {
   content: '';
   position: absolute;
   top: 0;
-  width: 28px;
-  height: 3px;
-  border-radius: 3px;
+  width: 32px;
+  height: 3.5px;
+  border-radius: 4px;
   background: linear-gradient(90deg, var(--svx-accent-cyan), var(--svx-accent-purple));
-  box-shadow: 0 0 10px rgba(0, 210, 255, 0.8), 0 0 18px rgba(138, 43, 226, 0.5);
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.85), 0 2px 8px rgba(138, 43, 226, 0.6);
   animation: svx-nav-accent-glow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -2198,20 +2198,31 @@ html, body {
 
 .svx-toast {
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 22px;
   border-radius: var(--svx-glass-radius-pill);
-  background: rgba(18, 18, 30, 0.95);
+  background: rgba(18, 18, 30, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 16px rgba(138, 43, 226, 0.25);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  line-height: 1.2;
+  white-space: nowrap;
+  max-width: 90vw;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   animation: svx-toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: auto;
+}
+
+.svx-toast .svx-icon-sm {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
 }
 
 @keyframes svx-toast-in {
@@ -2384,4 +2395,95 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
 }
+
+/* 21. Poetic Bio Dedicated Card Wrap (Perfect alignment without pill distortion) */
+.svx-edit-bio-wrap {
+  position: relative;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--svx-glass-border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.svx-edit-bio-wrap:focus-within {
+  border-color: var(--svx-accent-cyan);
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.25);
+}
+
+.svx-edit-bio-textarea {
+  width: 100%;
+  min-height: 84px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--svx-text-primary);
+  font-family: var(--svx-font-primary);
+  font-size: 14.5px;
+  line-height: 1.5;
+  resize: none;
+  box-sizing: border-box;
+  display: block;
+}
+
+.svx-edit-bio-textarea::placeholder {
+  color: var(--svx-text-muted);
+}
+
+/* 22. Tablet & Large Screen Ergonomics (iPad & Android Tablets) */
+@media (min-width: 768px) {
+  :root {
+    --svx-max-width: 680px;
+  }
+
+  .svx-main-viewport {
+    padding-top: 24px;
+    padding-bottom: 120px;
+  }
+
+  /* Centered Floating Dock Navigation Bar on Tablets */
+  .svx-bottom-nav {
+    max-width: 520px;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    bottom: 24px;
+    border-radius: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(138, 43, 226, 0.25);
+    background: rgba(14, 14, 24, 0.92);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+  }
+
+  /* Centered Floating Modals on Tablet */
+  .svx-modal-container {
+    max-width: 580px;
+    max-height: 85vh;
+    border-radius: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(138, 43, 226, 0.3);
+    margin: auto;
+    background: rgba(16, 16, 28, 0.96);
+  }
+
+  /* 2-Column Responsive Music Grid on Tablet */
+  .svx-curated-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px;
+  }
+
+  .svx-discover-results {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .svx-feed-card {
+    padding: 24px;
+  }
+}
+
 

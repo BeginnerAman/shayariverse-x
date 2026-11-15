@@ -51,28 +51,27 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p build-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.0.1.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.0.2.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShayariVerse-X-v1.0.1-APK
-          path: build-artifacts/ShayariVerse-X-v1.0.1.apk
+          name: ShayariVerse-X-v1.0.2-APK
+          path: build-artifacts/ShayariVerse-X-v1.0.2.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.0.1
+      - name: Publish GitHub Release v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.0.1 --yes || true
-          gh release create v1.0.1 build-artifacts/ShayariVerse-X-v1.0.1.apk \
-            --title "ShayariVerse X v1.0.1" \
-            --notes "### ShayariVerse X v1.0.1 Release Notes
-          - **Edit Profile Fixed**: Resolved class active/open mismatch so Display Name & Poetic Bio update instantly.
-          - **Bottom Nav Redesigned**: Removed awkward bottom dot indicator and replaced with sleek glowing ambient top bar.
-          - **Custom Dark Glass Dialogs**: Eliminated all ugly Android OS system alerts/confirm boxes with custom liquid-glass SVXDialog.
-          - **18 Authentic BGMs**: Fully integrated real background audio from BeginnerAman/ShayariVerse repo across 4 moods.
-          - **Pristine Feed**: Cleared all test/junk posts for a 100% clean, fresh start.
-          - **Profile Reset Bug Fixed**: Tapping the Profile tab always opens the current user's own profile.
-          - **Brand Star App Icon**: Generated launcher icons with the glowing 4-point star brand mark SVG.
-          - **Founder PIN Upgraded**: Set custom secret PIN for @aman."
+          gh release delete v1.0.2 --yes || true
+          gh release create v1.0.2 build-artifacts/ShayariVerse-X-v1.0.2.apk \
+            --title "ShayariVerse X v1.0.2" \
+            --notes "### ShayariVerse X v1.0.2 Release Notes
+          - **In-App Update Alert**: Integrated automatic background & manual check for new releases with 1-tap direct update prompt.
+          - **Tablet & Large Screen Ergonomics**: Responsive layout (680px width), centered floating dock bottom navigation, and floating dialog modals for iPad & Android Tablets.
+          - **No Dev Placeholder Text**: Removed initial 'Phase 1 Core Shell Loaded' text permanently; displays fresh canvas immediately.
+          - **Poetic Bio UI Perfected**: Dedicated 16px rounded card alignment eliminates capsule squeeze distortion & resize grip.
+          - **Post Delete Empty-State Fix**: Real-time re-render of 'A Fresh Canvas Awaits' prevents black screen when deleting the last post.
+          - **Single-Line Toast Alignment**: Horizontally centered, non-wrapping glowing pill toast notifications.
+          - **Polished Bottom Nav Glow**: Softer 32px ambient neon bar with micro-bounce tab physics."
