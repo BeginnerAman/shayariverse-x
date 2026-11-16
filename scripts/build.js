@@ -46,7 +46,7 @@ filesToCopy.forEach(file => {
   }
 });
 
-const dirsToCopy = ['js', 'lib', 'bgm', 'assets'];
+const dirsToCopy = ['js', 'lib', 'assets'];
 dirsToCopy.forEach(dir => {
   const src = path.join(ROOT_DIR, dir);
   if (fs.existsSync(src)) {
@@ -54,5 +54,11 @@ dirsToCopy.forEach(dir => {
     console.log(`[SVX Build] Copied directory: ${dir}/`);
   }
 });
+
+// Copy bgm metadata to dist, keeping heavy audio tracks on jsDelivr CDN so APK remains ultra-lightweight (~4.5MB)
+const bgmDist = path.join(DIST_DIR, 'bgm');
+fs.mkdirSync(bgmDist, { recursive: true });
+fs.copyFileSync(path.join(ROOT_DIR, 'bgm', 'preloaded-songs.json'), path.join(bgmDist, 'preloaded-songs.json'));
+console.log('[SVX Build] Bundled bgm/preloaded-songs.json (tracks streamed via high-speed jsDelivr CDN)');
 
 console.log('[SVX Build] APK web bundle ready in dist/! Capacitor can now sync and build the Android APK.');

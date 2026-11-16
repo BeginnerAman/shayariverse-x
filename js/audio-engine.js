@@ -11,9 +11,13 @@ class AudioEngine {
       pause() {},
       load() {}
     };
+    if (this.audio) {
+      this.audio.loop = true; // Seamless endless loop for couplet background music
+    }
     this.currentTrack = null;
     this._isPlaying = false;
     this._curatedCache = null;
+    this._fadeTimer = null;
     this.listeners = {
       playState: new Set(),
       trackChange: new Set(),
@@ -61,12 +65,12 @@ class AudioEngine {
   }
 
   _bindVisibilityEvents() {
-    // Battery & Performance rule: Pause audio when tab/app is minimized
+    // Battery & Performance rule: Pause audio immediately when tab/app is minimized
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
         if (document.hidden && this._isPlaying) {
           console.log('[SVX Audio] App backgrounded, auto-pausing audio to conserve battery');
-          this.pause();
+          this.pause(true);
         }
       });
     }
@@ -106,20 +110,80 @@ class AudioEngine {
     return () => this.listeners.error.delete(callback);
   }
 
+  /**
+   * Smoothly fades out audio volume before pausing (prevents abrupt click/cut)
+   * @param {number} durationMs - Duration in ms (default 350ms)
+   * @returns {Promise<void>}
+   */
+  async fadeOut(durationMs = 350) {
+    if (!this._isPlaying || !this.audio || !this.audio.pause) {
+      this.pause(true);
+      return;
+    }
+
+    clearInterval(this._fadeTimer);
+    const startVolume = this.audio.volume || 1;
+    const steps = 14;
+    const stepTime = Math.max(10, Math.floor(durationMs / steps));
+    const volumeStep = startVolume / steps;
+
+    return new Promise((resolve) => {
+      this._fadeTimer = setInterval(() => {
+        if (this.audio.volume > volumeStep) {
+          this.audio.volume = Math.max(0, this.audio.volume - volumeStep);
+        } else {
+          clearInterval(this._fadeTimer);
+          this.audio.pause();
+          this.audio.volume = startVolume; // restore base volume for next playback
+          resolve();
+        }
+      }, stepTime);
+    });
+  }
+
+  /**
+   * Smoothly fades in audio volume on start/resume
+   * @param {number} durationMs - Duration in ms (default 250ms)
+   */
+  fadeIn(durationMs = 250) {
+    if (!this.audio) return;
+    clearInterval(this._fadeTimer);
+    const targetVolume = 1;
+    this.audio.volume = 0;
+    const steps = 12;
+    const stepTime = Math.max(10, Math.floor(durationMs / steps));
+    const volumeStep = targetVolume / steps;
+
+    this._fadeTimer = setInterval(() => {
+      if (this.audio.volume + volumeStep < targetVolume) {
+        this.audio.volume = Math.min(targetVolume, this.audio.volume + volumeStep);
+      } else {
+        this.audio.volume = targetVolume;
+        clearInterval(this._fadeTimer);
+      }
+    }, stepTime);
+  }
+
   async play(url, metadata = {}) {
     if (!url) {
       console.warn('[SVX Audio] No URL provided to play');
       return;
     }
 
-    // If same track is already loaded and paused, just resume
+    // If same track is already loaded and paused, resume with smooth fade-in
     if (this.currentTrack && this.currentTrack.url === url) {
       try {
         await this.audio.play();
+        this.fadeIn();
         return;
       } catch (err) {
         console.warn('[SVX Audio] Resume failed, re-loading track:', err);
       }
+    }
+
+    // If another track was currently playing, smoothly fade out before switching
+    if (this._isPlaying) {
+      await this.fadeOut(150);
     }
 
     // Switch to new track
@@ -138,6 +202,7 @@ class AudioEngine {
 
     try {
       await this.audio.play();
+      this.fadeIn();
     } catch (err) {
       console.warn('[SVX Audio] Play request prevented by browser autoplay policy:', err);
       this._isPlaying = false;
@@ -145,16 +210,22 @@ class AudioEngine {
     }
   }
 
-  pause() {
-    this.audio.pause();
+  pause(immediate = false) {
+    if (immediate) {
+      clearInterval(this._fadeTimer);
+      this.audio.pause();
+      return;
+    }
+    this.fadeOut();
   }
 
   async togglePlayPause(url, metadata = {}) {
     if (this.currentTrack && this.currentTrack.url === url) {
       if (this._isPlaying) {
-        this.pause();
+        await this.fadeOut();
       } else {
         await this.audio.play();
+        this.fadeIn();
       }
     } else {
       await this.play(url, metadata);

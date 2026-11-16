@@ -9,7 +9,7 @@
     "cap:sync": "npm run build && npx cap sync",
     "cap:open": "npx cap open android",
     "cap:add": "npx cap add android",
-    "test": "node --check js/ui.js && node --check js/db.js && node --check js/composer.js"
+    "test": "node --check js/ui.js && node --check js/db.js && node --check js/composer.js && node --check js/audio-engine.js"
   },
   "repository": {
     "type": "git",
