@@ -56,27 +56,31 @@ jobs:
 
       - name: Prepare APK Output
         run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
           mkdir -p build-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.1.5.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk "build-artifacts/ShayariVerse-X-${TAG}.apk"
           cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-Latest.apk
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "APP_TAG=$TAG" >> $GITHUB_ENV
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShayariVerse-X-v1.1.5-APK
-          path: build-artifacts/ShayariVerse-X-v1.1.5.apk
+          name: ShayariVerse-X-APK
+          path: build-artifacts/ShayariVerse-X-Latest.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.1.5
+      - name: Publish GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.1.5 --yes || true
-          gh release create v1.1.5 build-artifacts/ShayariVerse-X-v1.1.5.apk build-artifacts/ShayariVerse-X-Latest.apk \
-            --title "ShayariVerse X v1.1.5" \
-            --notes "### ShayariVerse X v1.1.5 Release Notes
-          - **Native Android Version Sync (v1.1.5)**: Android system settings and package installer now accurately display version 1.1.5.
-          - **Seamless Auto-Update Engine**: Added automatic update notifications to ensure all users stay on the latest version.
-          - **Enhanced Like Button Responsiveness**: Smoother 0ms instant touch feedback on like buttons across feed and profile views.
-          - **Improved Double-Tap Heart Interaction**: Double-tapping a Shayari card smoothly triggers the heart burst animation with zero latency.
-          - **General Performance & Stability**: Core rendering and interaction optimizations for an ultra-fast, smooth experience."
+          gh release delete ${{ env.APP_TAG }} --yes || true
+          gh release create ${{ env.APP_TAG }} build-artifacts/ShayariVerse-X-${{ env.APP_TAG }}.apk build-artifacts/ShayariVerse-X-Latest.apk \
+            --title "ShayariVerse X ${{ env.APP_TAG }}" \
+            --notes "### ShayariVerse X ${{ env.APP_TAG }} Release Notes
+          - **Curated 181-Track Poetic Music Catalog**: Expanded background music library to 181 high-quality tracks categorized into Sukoon & Sufi, Dard & Heartbreak, Ishq & Romantic, and Aesthetic & Lo-Fi.
+          - **Seamless Couplet Audio Looping**: Background music now plays continuously without abrupt cutoffs at the end of clips.
+          - **Silky Smooth Audio Fades**: Integrated 350ms fade-out on pause and 250ms fade-in on play for a gentle, click-free listening experience.
+          - **Ultra-Lightweight APK (~4.5 MB)**: Audio files stream instantly from global CDN, keeping device storage free and download times minimal.
+          - **Battery-Saving Background Pause**: Immediate audio pause when minimizing the app to conserve battery."
