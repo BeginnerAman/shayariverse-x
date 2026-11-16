@@ -142,8 +142,9 @@ export function createFeedCardElement(shayari) {
   // Owner Controls & Admin God-Mode Check
   const currentUser = db.getCurrentUser();
   const isOwner = currentUser && currentUser.id === shayari.user_id;
+  const isFounder = currentUser && currentUser.handle === CONFIG.FOUNDER_HANDLE;
   const isGodMode = typeof localStorage !== 'undefined' && localStorage.getItem('svx_admin_god_mode') === 'true';
-  const isAdmin = currentUser && (currentUser.is_admin || isGodMode);
+  const isAdmin = isFounder && (currentUser.is_admin || isGodMode);
 
   let ownerControlsHTML = '';
   if (isOwner || isAdmin) {
@@ -165,14 +166,14 @@ export function createFeedCardElement(shayari) {
 
   card.innerHTML = `
     <header class="svx-card-header">
-      <div class="svx-author-group" data-action="view-profile" data-handle="${shayari.author_handle}">
-        <div class="svx-author-avatar" aria-hidden="true">${authorInitials}</div>
+      <div class="svx-author-group" data-action="view-profile" data-handle="${escapeHtml(shayari.author_handle)}">
+        <div class="svx-author-avatar" aria-hidden="true">${escapeHtml(authorInitials)}</div>
         <div class="svx-author-meta">
           <div class="svx-author-name-row">
-            <span class="svx-author-name">${shayari.author_name}</span>
+            <span class="svx-author-name">${escapeHtml(shayari.author_name)}</span>
             ${verifiedBadgeHTML}
           </div>
-          <span class="svx-author-handle">@${shayari.author_handle}</span>
+          <span class="svx-author-handle">@${escapeHtml(shayari.author_handle)}</span>
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -196,8 +197,8 @@ export function createFeedCardElement(shayari) {
           ${renderIcon('Disc')}
         </div>
         <div class="svx-audio-info">
-          <span class="svx-song-title">${shayari.song_name || 'Shayari BGM'}</span>
-          <span class="svx-song-artist">${shayari.song_artist || 'Viral Audio'}</span>
+          <span class="svx-song-title">${escapeHtml(shayari.song_name || 'Shayari BGM')}</span>
+          <span class="svx-song-artist">${escapeHtml(shayari.song_artist || 'Viral Audio')}</span>
         </div>
         <div class="svx-equalizer ${eqPausedClass}" aria-hidden="true">
           <div class="svx-eq-bar"></div>
@@ -285,8 +286,13 @@ export async function triggerHeartBurst(cardElement, shayariId) {
   const countSpan = likeBtn?.querySelector('.svx-like-count');
   const wasLiked = likeBtn?.classList.contains('liked');
 
-  // Optimistic 0ms update if not already liked
-  if (!wasLiked && countSpan) {
+  // Double-tap should always LIKE (or replay heart burst if already liked), never unlike
+  if (wasLiked) {
+    return;
+  }
+
+  // Optimistic 0ms update for newly liked post
+  if (countSpan) {
     const currentCount = parseInt(countSpan.textContent || '0', 10);
     syncLikeStateInDOM(shayariId, true, currentCount + 1);
   }
@@ -474,6 +480,8 @@ export class SVXFeedController {
   }
 
   bindCardEvents(listWrapper) {
+    if (!listWrapper || listWrapper._eventsBound) return;
+    listWrapper._eventsBound = true;
     listWrapper.addEventListener('click', async (e) => {
       const target = e.target.closest('[data-action]');
       if (!target) return;
@@ -546,8 +554,9 @@ export class SVXFeedController {
         }
       } else if (action === 'delete-shayari' && shayariId) {
         const currentUser = db.getCurrentUser();
+        const isFounder = currentUser && currentUser.handle === CONFIG.FOUNDER_HANDLE;
         const isGodMode = typeof localStorage !== 'undefined' && localStorage.getItem('svx_admin_god_mode') === 'true';
-        const isAdmin = currentUser && (currentUser.is_admin || isGodMode);
+        const isAdmin = isFounder && (currentUser.is_admin || isGodMode);
 
         const ok = await SVXDialog.confirm({
           title: "Delete Shayari?",
@@ -1137,11 +1146,12 @@ export class SVXCommentModal {
       }
 
       const currentUser = db.getCurrentUser();
+      const isFounder = currentUser && currentUser.handle === CONFIG.FOUNDER_HANDLE;
       const isGodMode = typeof localStorage !== 'undefined' && localStorage.getItem('svx_admin_god_mode') === 'true';
-      const isAdmin = currentUser && (currentUser.is_admin || isGodMode);
+      const isAdmin = isFounder && (currentUser.is_admin || isGodMode);
 
       this.listEl.innerHTML = comments.map(c => {
-        const initials = (c.author_name || 'U').slice(0, 2).toUpperCase();
+        const initials = escapeHtml((c.author_name || 'U').slice(0, 2).toUpperCase());
         const isOwner = currentUser && currentUser.id === c.user_id;
         const canDelete = isOwner || isAdmin;
         const verifiedBadge = c.is_verified ? renderIcon('BadgeCheck') : '';
@@ -1154,7 +1164,7 @@ export class SVXCommentModal {
                 <div class="svx-comment-author-info">
                   <span class="svx-comment-author">${escapeHtml(c.author_name)}</span>
                   ${verifiedBadge}
-                  <span class="svx-comment-handle">@${c.author_handle}</span>
+                  <span class="svx-comment-handle">@${escapeHtml(c.author_handle)}</span>
                 </div>
                 <div class="svx-comment-meta-right">
                   <span class="svx-comment-time">${formatTimeAgo(c.created_at)}</span>
@@ -1887,6 +1897,8 @@ export class SVXProfileController {
   }
 
   bindCardEvents(listWrapper) {
+    if (!listWrapper || listWrapper._eventsBound) return;
+    listWrapper._eventsBound = true;
     listWrapper.addEventListener('click', async (e) => {
       const target = e.target.closest('[data-action]');
       if (!target) return;
@@ -1966,8 +1978,9 @@ export class SVXProfileController {
         }
       } else if (action === 'delete-shayari' && shayariId) {
         const currentUser = db.getCurrentUser();
+        const isFounder = currentUser && currentUser.handle === CONFIG.FOUNDER_HANDLE;
         const isGodMode = typeof localStorage !== 'undefined' && localStorage.getItem('svx_admin_god_mode') === 'true';
-        const isAdmin = currentUser && (currentUser.is_admin || isGodMode);
+        const isAdmin = isFounder && (currentUser.is_admin || isGodMode);
 
         const ok = await SVXDialog.confirm({
           title: "Delete Shayari?",
@@ -2139,8 +2152,8 @@ export function updateShayariInDOM(shayari) {
             ${renderIcon('Disc')}
           </div>
           <div class="svx-audio-info">
-            <span class="svx-song-title">${shayari.song_name || 'Shayari BGM'}</span>
-            <span class="svx-song-artist">${shayari.song_artist || 'Viral Audio'}</span>
+            <span class="svx-song-title">${escapeHtml(shayari.song_name || 'Shayari BGM')}</span>
+            <span class="svx-song-artist">${escapeHtml(shayari.song_artist || 'Viral Audio')}</span>
           </div>
           <div class="svx-equalizer paused" aria-hidden="true">
             <div class="svx-eq-bar"></div>

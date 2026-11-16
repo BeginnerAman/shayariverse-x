@@ -132,7 +132,9 @@ export class LocalStorageDB {
 
   setCurrentUser(user) {
     if (user) {
-      this.storage.setItem(this.kCurrentUser, JSON.stringify(user));
+      const safe = { ...user };
+      delete safe.pin_hash;
+      this.storage.setItem(this.kCurrentUser, JSON.stringify(safe));
     } else {
       this.storage.removeItem(this.kCurrentUser);
     }
@@ -140,6 +142,9 @@ export class LocalStorageDB {
 
   logout() {
     this.setCurrentUser(null);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('svx_admin_god_mode');
+    }
   }
 
   // --- Users CRUD ---
@@ -725,24 +730,28 @@ export class SupabaseDB {
 
   async getUserByHandle(handle) {
     const cleanHandle = handle.toLowerCase().replace(/^@/, '').trim();
-    const users = await this._fetch(`/users?handle=eq.${cleanHandle}&select=*`);
+    const users = await this._fetch(`/users?handle=eq.${encodeURIComponent(cleanHandle)}&select=id,handle,display_name,bio,is_admin,is_verified,created_at`);
     return (users && users.length > 0) ? users[0] : null;
   }
 
   async getUserById(userId) {
-    const users = await this._fetch(`/users?id=eq.${userId}&select=*`);
+    const users = await this._fetch(`/users?id=eq.${encodeURIComponent(userId)}&select=id,handle,display_name,bio,is_admin,is_verified,created_at`);
     return (users && users.length > 0) ? users[0] : null;
   }
 
   async verifyPin(handle, pinHash) {
-    const user = await this.getUserByHandle(handle);
+    const cleanHandle = handle.toLowerCase().replace(/^@/, '').trim();
+    const users = await this._fetch(`/users?handle=eq.${encodeURIComponent(cleanHandle)}&select=id,handle,display_name,bio,pin_hash,is_admin,is_verified,created_at`);
+    const user = (users && users.length > 0) ? users[0] : null;
     if (!user) return null;
     const validFounderHashes = [
       '0753faaf9103d45f2869d4a061f639ffb173dd37d97cbe627becd3d60ef13572'
     ];
     if (user.pin_hash === pinHash || (user.handle === 'aman' && validFounderHashes.includes(pinHash))) {
-      this.setCurrentUser(user);
-      return user;
+      const safeUser = { ...user };
+      delete safeUser.pin_hash;
+      this.setCurrentUser(safeUser);
+      return safeUser;
     }
     return null;
   }
