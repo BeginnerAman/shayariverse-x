@@ -900,12 +900,15 @@ export class SupabaseDB {
   }
 
   async deleteShayari(shayariId, userId, isAdmin = false) {
-    const filter = isAdmin ? `id=eq.${shayariId}` : `id=eq.${shayariId}&user_id=eq.${userId}`;
+    const currentUser = this.getCurrentUser();
+    const isFounder = currentUser && currentUser.handle === CONFIG.FOUNDER_HANDLE;
+    const canDeleteAsAdmin = isAdmin && isFounder;
+    const filter = canDeleteAsAdmin ? `id=eq.${encodeURIComponent(shayariId)}` : `id=eq.${encodeURIComponent(shayariId)}&user_id=eq.${encodeURIComponent(userId)}`;
     await this._fetch(`/shayaris?${filter}`, {
       method: 'DELETE'
     });
 
-    if (isAdmin) {
+    if (canDeleteAsAdmin) {
       await this.logAdminAction(userId, 'delete_shayari', shayariId, 'shayari', null);
     }
     return true;
@@ -983,12 +986,15 @@ export class SupabaseDB {
   }
 
   async deleteComment(commentId, userId, isAdmin = false) {
-    const filter = isAdmin ? `id=eq.${commentId}` : `id=eq.${commentId}&user_id=eq.${userId}`;
+    const currentUser = this.getCurrentUser();
+    const isFounder = currentUser && currentUser.handle === CONFIG.FOUNDER_HANDLE;
+    const canDeleteAsAdmin = isAdmin && isFounder;
+    const filter = canDeleteAsAdmin ? `id=eq.${encodeURIComponent(commentId)}` : `id=eq.${encodeURIComponent(commentId)}&user_id=eq.${encodeURIComponent(userId)}`;
     await this._fetch(`/comments?${filter}`, {
       method: 'DELETE'
     });
 
-    if (isAdmin) {
+    if (canDeleteAsAdmin) {
       await this.logAdminAction(userId, 'delete_comment', commentId, 'comment', null);
     }
     return true;

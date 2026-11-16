@@ -57,25 +57,26 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p build-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.1.4.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-v1.1.5.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/ShayariVerse-X-Latest.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShayariVerse-X-v1.1.4-APK
-          path: build-artifacts/ShayariVerse-X-v1.1.4.apk
+          name: ShayariVerse-X-v1.1.5-APK
+          path: build-artifacts/ShayariVerse-X-v1.1.5.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.1.4
+      - name: Publish GitHub Release v1.1.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.1.4 --yes || true
-          gh release create v1.1.4 build-artifacts/ShayariVerse-X-v1.1.4.apk build-artifacts/ShayariVerse-X-Latest.apk \
-            --title "ShayariVerse X v1.1.4" \
-            --notes "### ShayariVerse X v1.1.4 Release Notes
-          - **Native Android Version Sync (v1.1.4)**: Synchronized Android Gradle versionName and versionCode with app runtime version, ensuring system settings and package installer reflect v1.1.4.
-          - **0ms Event Listener Deduping**: Eliminated duplicate click listener registrations across feed and profile cards, resolving rapid like/unlike toggling.
-          - **Double-Tap Tactile Heart UX**: Double-tapping a card now reliably displays the heart burst animation without inadvertently unliking previously liked couplets.
-          - **UI Sanitization & Session Hardening**: Hardened profile and couplet card rendering protections and scoped admin actions strictly to active founder sessions with automatic logout cleanup."
+          gh release delete v1.1.5 --yes || true
+          gh release create v1.1.5 build-artifacts/ShayariVerse-X-v1.1.5.apk build-artifacts/ShayariVerse-X-Latest.apk \
+            --title "ShayariVerse X v1.1.5" \
+            --notes "### ShayariVerse X v1.1.5 Release Notes
+          - **Native Android Version Sync (v1.1.5)**: Android system settings and package installer now accurately display version 1.1.5.
+          - **Seamless Auto-Update Engine**: Added automatic update notifications to ensure all users stay on the latest version.
+          - **Enhanced Like Button Responsiveness**: Smoother 0ms instant touch feedback on like buttons across feed and profile views.
+          - **Improved Double-Tap Heart Interaction**: Double-tapping a Shayari card smoothly triggers the heart burst animation with zero latency.
+          - **General Performance & Stability**: Core rendering and interaction optimizations for an ultra-fast, smooth experience."

@@ -1434,20 +1434,38 @@ export class SVXUpdateChecker {
       const latestTag = release.tag_name || '';
       const latestVersion = latestTag.replace(/^v/, '').trim();
       const currentVersion = CONFIG.VERSION.replace(/^v/, '').trim();
+      const minSupported = (CONFIG.MIN_SUPPORTED_VERSION || '1.1.4').replace(/^v/, '').trim();
 
-      if (this.isNewer(latestVersion, currentVersion)) {
+      const isOutdated = this.isNewer(latestVersion, currentVersion);
+      const isBelowMin = this.isNewer(minSupported, currentVersion);
+
+      if (isOutdated) {
         const releaseUrl = release.html_url || `https://github.com/BeginnerAman/shayariverse-x/releases/tag/v${latestVersion}`;
+        const apkAsset = release.assets?.find(a => a.name.endsWith('.apk'));
+        const downloadUrl = apkAsset ? apkAsset.browser_download_url : releaseUrl;
 
-        const updateNow = await SVXDialog.confirm({
-          title: `Update Ready! (v${latestVersion})`,
-          message: `ShayariVerse X v${latestVersion} is available with fixes and enhancements. Tap "Update Now" to download.`,
-          confirmText: "Update Now",
-          cancelText: "Later",
-          isDanger: false
-        });
+        if (isBelowMin) {
+          // Mandatory Force Update for versions below minimum supported
+          this.lockAppForUpdate(latestVersion, downloadUrl);
+          await SVXDialog.alert({
+            title: `Update Required (v${latestVersion})`,
+            message: `A required update to v${latestVersion} is available. Please update now to continue using ShayariVerse X.`,
+            buttonText: "Update Now"
+          });
+          window.open(downloadUrl, '_system');
+        } else {
+          // Optional/Recommended update for modern versions
+          const updateNow = await SVXDialog.confirm({
+            title: `Update Ready! (v${latestVersion})`,
+            message: `ShayariVerse X v${latestVersion} is available with fixes and enhancements. Tap "Update Now" to download.`,
+            confirmText: "Update Now",
+            cancelText: "Later",
+            isDanger: false
+          });
 
-        if (updateNow && releaseUrl) {
-          window.open(releaseUrl, '_system');
+          if (updateNow && downloadUrl) {
+            window.open(downloadUrl, '_system');
+          }
         }
       } else if (isManual) {
         showToast(`You have the latest version (v${CONFIG.VERSION})`, "Check");
@@ -1464,6 +1482,26 @@ export class SVXUpdateChecker {
         checkBtn.style.opacity = '';
         checkBtn.innerHTML = originalContent;
       }
+    }
+  }
+
+  static lockAppForUpdate(latestVersion, downloadUrl) {
+    let blocker = document.getElementById('svx-update-blocker');
+    if (!blocker) {
+      blocker = document.createElement('div');
+      blocker.id = 'svx-update-blocker';
+      blocker.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,20,0.96);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;user-select:none;';
+      blocker.innerHTML = `
+        <div style="font-size:22px;font-weight:700;margin-bottom:12px;color:#fff;">Update Required</div>
+        <p style="font-size:14px;color:rgba(255,255,255,0.7);max-width:300px;margin-bottom:24px;line-height:1.5;">
+          A required update (v${latestVersion}) is available. Please update ShayariVerse X to continue enjoying your Shayari feed.
+        </p>
+        <button id="svx-blocker-update-btn" class="svx-btn-post" style="padding:14px 32px;font-size:15px;cursor:pointer;">Update Now</button>
+      `;
+      document.body.appendChild(blocker);
+      document.getElementById('svx-blocker-update-btn')?.addEventListener('click', () => {
+        window.open(downloadUrl, '_system');
+      });
     }
   }
 
@@ -2325,10 +2363,10 @@ export function initUI() {
   // 10. Real-time Offline & Online Network Monitor
   initNetworkMonitor(feedController, profileController);
 
-  // 11. Background In-App Update Check (Option A)
+  // 11. Background In-App Update Check
   setTimeout(() => {
     SVXUpdateChecker.checkForUpdates(false);
-  }, 2500);
+  }, 1000);
 
   return {
     router,
