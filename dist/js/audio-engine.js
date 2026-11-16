@@ -200,6 +200,20 @@ class AudioEngine {
     this.audio.src = url;
     this.audio.load();
 
+    // Resilient CDN fallback: If jsDelivr encounters an edge issue, auto-fallback to raw GitHub
+    this.audio.onerror = () => {
+      if (url.includes('cdn.jsdelivr.net') && !this._retriedRaw) {
+        this._retriedRaw = true;
+        const rawUrl = url
+          .replace('https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/', 'https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/')
+          .replace('https://cdn.jsdelivr.net/gh/BeginnerAman/shayariverse-x@main/', 'https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/');
+        console.log('[SVX Audio] CDN edge fallback to direct raw GitHub stream:', rawUrl);
+        this.audio.src = rawUrl;
+        this.audio.load();
+        this.audio.play().catch(() => {});
+      }
+    };
+
     try {
       await this.audio.play();
       this.fadeIn();
