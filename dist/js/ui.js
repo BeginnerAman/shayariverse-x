@@ -273,6 +273,19 @@ export function syncLikeStateInDOM(shayariId, isLiked, count) {
  * Triggers SVG heart burst overlay animation and marks post as liked
  */
 export async function triggerHeartBurst(cardElement, shayariId) {
+  const currentUser = db.getCurrentUser();
+  const isAuthenticated = currentUser && currentUser.id && currentUser.handle !== 'guest';
+
+  // If user is not authenticated, trigger auth modal without altering like count or heart state
+  if (!isAuthenticated) {
+    if (globalAuthModal) {
+      globalAuthModal.requireAuth(() => {
+        triggerHeartBurst(cardElement, shayariId);
+      });
+    }
+    return;
+  }
+
   const overlay = document.createElement('div');
   overlay.className = 'svx-heart-burst-overlay';
   overlay.innerHTML = `<svg class="svx-heart-burst-icon" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`;
@@ -297,26 +310,13 @@ export async function triggerHeartBurst(cardElement, shayariId) {
     syncLikeStateInDOM(shayariId, true, currentCount + 1);
   }
 
-  const executeLike = async (user) => {
-    try {
-      const result = await db.toggleLike(user.id, shayariId);
-      if (result && typeof result.newCount === 'number') {
-        syncLikeStateInDOM(shayariId, result.liked, result.newCount);
-      }
-    } catch (err) {
-      console.warn('[SVX] Like error:', err);
+  try {
+    const result = await db.toggleLike(currentUser.id, shayariId);
+    if (result && typeof result.newCount === 'number') {
+      syncLikeStateInDOM(shayariId, result.liked, result.newCount);
     }
-  };
-
-  if (globalAuthModal) {
-    globalAuthModal.requireAuth(executeLike);
-  } else {
-    let currentUser = db.getCurrentUser();
-    if (!currentUser) {
-      currentUser = { id: 'guest-user', handle: 'guest', display_name: 'Guest Shayar' };
-      db.setCurrentUser(currentUser);
-    }
-    executeLike(currentUser);
+  } catch (err) {
+    console.warn('[SVX] Like error:', err);
   }
 }
 
@@ -522,11 +522,9 @@ export class SVXFeedController {
           }
         };
 
-        if (this.authModal) {
-          this.authModal.requireAuth(handleLike);
-        } else {
-          let currentUser = db.getCurrentUser() || { id: 'guest-user', handle: 'guest', display_name: 'Guest Shayar' };
-          handleLike(currentUser);
+        const modal = this.authModal || globalAuthModal;
+        if (modal) {
+          modal.requireAuth(handleLike);
         }
       } else if (action === 'comment' && shayariId) {
         if (this.commentModal) {
@@ -996,6 +994,7 @@ export class SVXAuthModal {
   close() {
     if (!this.modal) return;
     this.modal.classList.remove('active');
+    this.pendingAction = null;
     this.clearHandleFeedback();
   }
 
@@ -1975,11 +1974,9 @@ export class SVXProfileController {
             showToast('Could not update like. Check connection.', 'AlertTriangle');
           }
         };
-        if (this.authModal) {
-          this.authModal.requireAuth(handleLike);
-        } else {
-          let currentUser = db.getCurrentUser() || { id: 'guest-user', handle: 'guest', display_name: 'Guest Shayar' };
-          handleLike(currentUser);
+        const modal = this.authModal || globalAuthModal;
+        if (modal) {
+          modal.requireAuth(handleLike);
         }
       } else if (action === 'comment' && shayariId) {
         this.commentModal?.open(shayariId);
@@ -2260,6 +2257,83 @@ export function initNetworkMonitor(feedController, profileController) {
   }
 }
 
+/**
+ * Professional Android Hardware & Gesture Back Navigation
+ * Dismisses active dialogs, bottom sheets, composer, and sub-views first.
+ * Navigates to root Home Feed before allowing smooth OS exit.
+ */
+export function initBackNavigation({ authModal, commentModal, composerModal, editProfileModal, profileController, router }) {
+  function handleBack() {
+    // 1. Dismiss custom dialog if open
+    const dialogModal = document.getElementById('svx-dialog-modal');
+    if (dialogModal?.classList.contains('active')) {
+      SVXDialog.close(false);
+      return true;
+    }
+
+    // 2. Close Comments Bottom Sheet if open
+    if (commentModal?.sheet?.classList.contains('open')) {
+      commentModal.close();
+      return true;
+    }
+
+    // 3. Close Composer Modal if open
+    if (composerModal?.modal?.classList.contains('active')) {
+      composerModal.close();
+      return true;
+    }
+
+    // 4. Close Auth Modal if open
+    if (authModal?.modal?.classList.contains('active')) {
+      authModal.close();
+      return true;
+    }
+
+    // 5. Close Edit Profile Modal if open
+    if (editProfileModal?.modal?.classList.contains('active')) {
+      editProfileModal.close();
+      return true;
+    }
+
+    // 6. If viewing another author's profile, return to feed or own profile
+    if (profileController?.viewingHandle) {
+      profileController.viewingHandle = null;
+      profileController.render();
+      return true;
+    }
+
+    // 7. If not on Home Feed tab, switch back to Home Feed
+    if (router && router.currentView !== 'feed') {
+      router.switchView('feed');
+      return true;
+    }
+
+    // 8. On Home Feed: return false -> allow smooth native app exit/minimize
+    return false;
+  }
+
+  if (typeof window !== 'undefined') {
+    // Capacitor Native Android Hardware Back Event
+    const Cap = window.Capacitor;
+    if (Cap?.Plugins?.App?.addListener) {
+      Cap.Plugins.App.addListener('backButton', () => {
+        const handled = handleBack();
+        if (!handled) {
+          Cap.Plugins.App.exitApp();
+        }
+      });
+    }
+
+    // Android WebView / Cordova Back Button fallback
+    document.addEventListener('backbutton', (e) => {
+      const handled = handleBack();
+      if (handled) {
+        e.preventDefault();
+      }
+    });
+  }
+}
+
 /* 12. Initialize Shell UI */
 export function initUI() {
   console.log(`[SVX] Initializing ${CONFIG.APP_NAME} (${CONFIG.APP_SHORT}) v${CONFIG.VERSION}`);
@@ -2367,6 +2441,16 @@ export function initUI() {
   setTimeout(() => {
     SVXUpdateChecker.checkForUpdates(false);
   }, 1000);
+
+  // 12. Professional Android Hardware & Gesture Back Navigation
+  initBackNavigation({
+    authModal,
+    commentModal,
+    composerModal,
+    editProfileModal,
+    profileController,
+    router
+  });
 
   return {
     router,
