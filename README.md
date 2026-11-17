@@ -26,8 +26,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/BeginnerAman/shayariverse-x/releases/download/v1.1.6/ShayariVerse-X-v1.1.6.apk">
-    <img src="https://img.shields.io/badge/Download_APK-v1.1.6_Release-1f6feb?style=for-the-badge&logo=android&logoColor=white&labelColor=0d1117" alt="Download APK" />
+  <a href="https://github.com/BeginnerAman/shayariverse-x/releases/download/v1.1.7/ShayariVerse-X-v1.1.7.apk">
+    <img src="https://img.shields.io/badge/Download_APK-v1.1.7_Release-1f6feb?style=for-the-badge&logo=android&logoColor=white&labelColor=0d1117" alt="Download APK" />
   </a>
 </p>
 
