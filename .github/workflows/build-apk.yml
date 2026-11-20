@@ -79,8 +79,8 @@ jobs:
           gh release create ${{ env.APP_TAG }} build-artifacts/ShayariVerse-X-${{ env.APP_TAG }}.apk build-artifacts/ShayariVerse-X-Latest.apk \
             --title "ShayariVerse X ${{ env.APP_TAG }}" \
             --notes "### ShayariVerse X ${{ env.APP_TAG }} Release Notes
-          - **Expanded 268-Track Curated Poetic Music Catalog**: Integrated 6 additional background audio tracks (Alfaaz, Pyaar Vi Ni Karda, Guzarish, Rabba Lakh Lakh Shukar Manaawa, Mud Ke Dobara Aande Na, and Sajne Sawarne Ki Zaroorat) delivering 268 high-fidelity BGM choices.
-          - **Full-Spectrum Random Shuffle Autoplay**: Verified and enhanced global playlist shuffle engine to dynamically draw across all 268 curated tracks and mood categories without omission.
-          - **Edge-to-Edge Tablet Top App Bar**: Fixed full-width top navigation patti on tablets and large screens, harmonizing header geometry seamlessly with the bottom dock.
-          - **Precision Centered Profile States**: Perfect horizontal dead-centering for author empty states and notices across both mobile and tablet displays.
-          - **Floating Discover Mini Music Bar**: Persistent liquid glass floating player pill in Discover view with track art, title, and full playback controls."
+          - **Studio-Grade Modal Backdrop & Anti-Bleed Blur**: Upgraded composer overlay with saturated dark obsidian glass and 24px backdrop blur, eliminating feed ghost-text bleed-through.
+          - **Interactive Live Preview Audio Pill**: Composing authors can now tap the preview audio pill directly to play/pause and audition their background score before posting, complete with rotating vinyl animation and real-time equalizer bars.
+          - **BGM Detach & Random Track Rotation**: Added one-tap BGM removal for pure text shayaris, plus dynamic random track selection from the 268-song catalog on fresh compositions.
+          - **Harmonized Button Color Architecture**: Refined Auto-Format and Attach Music button themes with role-specific glass tints and high-contrast typography.
+          - **Expanded 268-Track Curated Poetic Music Catalog**: Integrated 268 high-fidelity BGM choices with full-spectrum random shuffle autoplay across all curated tracks and mood categories."
