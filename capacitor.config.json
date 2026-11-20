@@ -18,10 +18,6 @@
       "style": "Dark",
       "backgroundColor": "#06060b"
     },
-    "LocalNotifications": {
-      "smallIcon": "ic_stat_music",
-      "iconColor": "#9333ea"
-    },
     "CapacitorHttp": {
       "enabled": true
     }

@@ -22,7 +22,6 @@ class AudioEngine {
     this._curatedCache = null;
     this._fadeTimer = null;
     this._mediaSessionWired = false;
-    this._localNotifInitialized = false;
 
     // Background playback preference (persisted in localStorage, defaults to true)
     let storedBg = null;
@@ -49,7 +48,6 @@ class AudioEngine {
     this.audio.addEventListener('play', () => {
       this._isPlaying = true;
       this._updateMediaSession(this.currentTrack);
-      this._showPlaybackNotification(this.currentTrack, true);
       this._notify('playState', { isPlaying: true, track: this.currentTrack });
     });
 
@@ -58,7 +56,6 @@ class AudioEngine {
       if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
-      this._showPlaybackNotification(this.currentTrack, false);
       this._notify('playState', { isPlaying: false, track: this.currentTrack });
     });
 
@@ -68,8 +65,6 @@ class AudioEngine {
 
       if (this.playbackMode === 'sequential' || this.playbackMode === 'shuffle') {
         this.playNext();
-      } else {
-        this._clearPlaybackNotification();
       }
     });
 
@@ -152,124 +147,6 @@ class AudioEngine {
       navigator.mediaSession.playbackState = this._isPlaying ? 'playing' : 'paused';
     } catch (e) {
       console.warn('[SVX Audio] MediaSession update error:', e);
-    }
-  }
-
-  _getLocalNotifications() {
-    if (typeof window === 'undefined') return null;
-    return window.Capacitor?.Plugins?.LocalNotifications || null;
-  }
-
-  async _initLocalNotificationBridge() {
-    if (this._localNotifInitialized) return;
-    const notifs = this._getLocalNotifications();
-    if (!notifs) return;
-
-    try {
-      this._localNotifInitialized = true;
-
-      // 1. Silent dedicated notification channel for background audio playback
-      if (typeof notifs.createChannel === 'function') {
-        await notifs.createChannel({
-          id: 'svx_bgm_channel_v2',
-          name: 'Shayari BGM Player',
-          description: 'Live background audio playback and interactive controls',
-          importance: 3, // Level 2: Active notification tray (out of Silent) & auto-expanded on Lock Screen
-          visibility: 1, // VISIBILITY_PUBLIC: shows on Android Lock Screen
-          vibration: false,
-          sound: undefined
-        }).catch(() => {});
-      }
-
-      // 2. Register Interactive Action Types (Pause, Resume, Next Track)
-      if (typeof notifs.registerActionTypes === 'function') {
-        await notifs.registerActionTypes({
-          types: [
-            {
-              id: 'SVX_AUDIO_PLAYING',
-              actions: [
-                { id: 'svx_pause', title: 'Pause' },
-                { id: 'svx_next', title: 'Next Track' }
-              ]
-            },
-            {
-              id: 'SVX_AUDIO_PAUSED',
-              actions: [
-                { id: 'svx_resume', title: 'Resume' },
-                { id: 'svx_next', title: 'Next Track' }
-              ]
-            }
-          ]
-        }).catch(() => {});
-      }
-
-      // 3. Listen for Action Button clicks from Notification Shade & Lock Screen
-      if (typeof notifs.addListener === 'function') {
-        notifs.addListener('localNotificationActionPerformed', (actionData) => {
-          const actionId = actionData?.actionId;
-          if (actionId === 'svx_pause') {
-            this.pause(true);
-          } else if (actionId === 'svx_resume') {
-            if (this.currentTrack) {
-              this.audio.play().catch(() => {});
-            }
-          } else if (actionId === 'svx_next') {
-            this.playNext();
-          }
-        });
-      }
-
-      // 4. Request Android 13+ Notification Permission if prompted
-      if (typeof notifs.checkPermissions === 'function' && typeof notifs.requestPermissions === 'function') {
-        const status = await notifs.checkPermissions().catch(() => null);
-        if (status?.display === 'prompt' || status?.display === 'prompt-with-rationale') {
-          await notifs.requestPermissions().catch(() => {});
-        }
-      }
-    } catch (err) {
-      console.warn('[SVX Audio] Local notification bridge init error:', err);
-    }
-  }
-
-  async _showPlaybackNotification(track, isPlaying = true) {
-    if (!track) return;
-    const notifs = this._getLocalNotifications();
-    if (!notifs || typeof notifs.schedule !== 'function') return;
-
-    await this._initLocalNotificationBridge();
-
-    try {
-      const NOTIF_ID = 7824;
-      await notifs.schedule({
-        notifications: [
-          {
-            id: NOTIF_ID,
-            title: track.name || 'Shayari BGM',
-            body: isPlaying
-              ? `${track.artist || 'ShayariVerse X'} • Now Playing`
-              : `${track.artist || 'ShayariVerse X'} • Paused (Tap to resume)`,
-            channelId: 'svx_bgm_channel_v2',
-            smallIcon: 'ic_stat_music',
-            largeIcon: 'svx_cover',
-            iconColor: '#9333ea',
-            ongoing: !!isPlaying, // pinned while playing, swipeable when paused
-            autoCancel: false,
-            actionTypeId: isPlaying ? 'SVX_AUDIO_PLAYING' : 'SVX_AUDIO_PAUSED',
-            extra: { url: track.url }
-          }
-        ]
-      });
-    } catch (err) {
-      console.warn('[SVX Audio] Notification schedule error:', err);
-    }
-  }
-
-  _clearPlaybackNotification() {
-    const notifs = this._getLocalNotifications();
-    if (notifs && typeof notifs.cancel === 'function') {
-      try {
-        notifs.cancel({ notifications: [{ id: 7824 }] }).catch(() => {});
-      } catch {}
     }
   }
 
@@ -543,7 +420,6 @@ class AudioEngine {
       this.audio.currentTime = 0;
     }
     this._isPlaying = false;
-    this._clearPlaybackNotification();
     this._notify('playState', { isPlaying: false, track: this.currentTrack });
   }
 
