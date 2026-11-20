@@ -1697,6 +1697,13 @@ export class SVXUpdateChecker {
           });
           window.open(downloadUrl, '_system');
         } else {
+          // Check if user already dismissed this update on startup
+          const dismissedVersion = typeof localStorage !== 'undefined' ? localStorage.getItem('svx_dismissed_update') : null;
+          if (!isManual && dismissedVersion === latestVersion) {
+            console.log(`[SVX Update] Update v${latestVersion} previously dismissed, suppressing auto popup.`);
+            return;
+          }
+
           // Optional/Recommended update for modern versions
           const updateNow = await SVXDialog.confirm({
             title: `Update Ready! (v${latestVersion})`,
@@ -1708,6 +1715,13 @@ export class SVXUpdateChecker {
 
           if (updateNow && downloadUrl) {
             window.open(downloadUrl, '_system');
+          } else {
+            // Remember user dismissed this update on startup
+            try {
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('svx_dismissed_update', latestVersion);
+              }
+            } catch {}
           }
         }
       } else if (isManual) {

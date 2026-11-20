@@ -287,23 +287,27 @@ class AudioEngine {
 
         if (!this._nativeMediaActionsWired) {
           this._nativeMediaActionsWired = true;
-          nativeMS.setActionHandler({ action: 'play' }, () => {
-            if (this.currentTrack) {
-              this.audio.play().catch(() => {});
-            }
-          }).catch(() => {});
-          nativeMS.setActionHandler({ action: 'pause' }, () => {
-            this.pause(true);
-          }).catch(() => {});
-          nativeMS.setActionHandler({ action: 'nexttrack' }, () => {
-            this.playNext();
-          }).catch(() => {});
-          nativeMS.setActionHandler({ action: 'previoustrack' }, () => {
-            this.playPrevious();
-          }).catch(() => {});
-          nativeMS.setActionHandler({ action: 'stop' }, () => {
-            this.pause(true);
-          }).catch(() => {});
+
+          // 1. Official Capacitor event bus listener (persistent and indestructible)
+          if (typeof nativeMS.addListener === 'function') {
+            nativeMS.addListener('mediaAction', (data) => {
+              this._handleMediaAction(data?.action);
+            }).catch(() => {});
+            nativeMS.addListener('play', () => this._handleMediaAction('play')).catch(() => {});
+            nativeMS.addListener('pause', () => this._handleMediaAction('pause')).catch(() => {});
+            nativeMS.addListener('nexttrack', () => this._handleMediaAction('nexttrack')).catch(() => {});
+            nativeMS.addListener('previoustrack', () => this._handleMediaAction('previoustrack')).catch(() => {});
+            nativeMS.addListener('stop', () => this._handleMediaAction('stop')).catch(() => {});
+          }
+
+          // 2. Register setActionHandler for direct callback hooks
+          if (typeof nativeMS.setActionHandler === 'function') {
+            ['play', 'pause', 'nexttrack', 'previoustrack', 'stop'].forEach(action => {
+              nativeMS.setActionHandler({ action }, (data) => {
+                this._handleMediaAction(data?.action || action);
+              }).catch(() => {});
+            });
+          }
         }
       } catch (err) {
         console.warn('[SVX Audio] Native MediaSession notice:', err);
@@ -494,8 +498,38 @@ class AudioEngine {
     }, stepTime);
   }
 
+  _handleMediaAction(action) {
+    console.log('[SVX Audio] Remote Media Action received:', action);
+    const act = (action || '').toLowerCase();
+    if (act === 'play') {
+      this.resume();
+    } else if (act === 'pause') {
+      this.pause(true);
+    } else if (act === 'nexttrack' || act === 'next') {
+      this.playNext();
+    } else if (act === 'previoustrack' || act === 'previous') {
+      this.playPrevious();
+    } else if (act === 'stop') {
+      this.pause(true);
+    }
+  }
+
+  async resume() {
+    if (this.audio && this.currentTrack) {
+      try {
+        await this.audio.play();
+        this.fadeIn();
+      } catch (err) {
+        console.warn('[SVX Audio] Resume error:', err);
+      }
+    }
+  }
+
   async play(url, metadata = {}) {
     if (!url) {
+      if (this.currentTrack) {
+        return this.resume();
+      }
       console.warn('[SVX Audio] No URL provided to play');
       return;
     }
