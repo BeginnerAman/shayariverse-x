@@ -171,10 +171,10 @@ class AudioEngine {
       // 1. Silent dedicated notification channel for background audio playback
       if (typeof notifs.createChannel === 'function') {
         await notifs.createChannel({
-          id: 'svx_bgm_channel',
+          id: 'svx_bgm_channel_v2',
           name: 'Shayari BGM Player',
-          description: 'Current playing background score and playback controls',
-          importance: 2, // Low importance: no sound or vibration on track updates
+          description: 'Live background audio playback and interactive controls',
+          importance: 3, // Level 2: Active notification tray (out of Silent) & auto-expanded on Lock Screen
           visibility: 1, // VISIBILITY_PUBLIC: shows on Android Lock Screen
           vibration: false,
           sound: undefined
@@ -246,9 +246,12 @@ class AudioEngine {
             id: NOTIF_ID,
             title: track.name || 'Shayari BGM',
             body: isPlaying
-              ? `${track.artist || 'ShayariVerse X'} • Playing`
-              : `${track.artist || 'ShayariVerse X'} • Paused (Tap to open)`,
-            channelId: 'svx_bgm_channel',
+              ? `${track.artist || 'ShayariVerse X'} • Now Playing`
+              : `${track.artist || 'ShayariVerse X'} • Paused (Tap to resume)`,
+            channelId: 'svx_bgm_channel_v2',
+            smallIcon: 'ic_stat_music',
+            largeIcon: 'svx_cover',
+            iconColor: '#9333ea',
             ongoing: !!isPlaying, // pinned while playing, swipeable when paused
             autoCancel: false,
             actionTypeId: isPlaying ? 'SVX_AUDIO_PLAYING' : 'SVX_AUDIO_PAUSED',
