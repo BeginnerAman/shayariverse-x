@@ -14,6 +14,9 @@ class AudioEngine {
     if (this.audio) {
       this.audio.loop = true; // Seamless endless loop for couplet background music
     }
+    this.playbackMode = 'loop'; // 'loop' | 'sequential' | 'shuffle'
+    this.playlist = [];
+    this.currentIndex = -1;
     this.currentTrack = null;
     this._isPlaying = false;
     this._curatedCache = null;
@@ -22,6 +25,7 @@ class AudioEngine {
       playState: new Set(),
       trackChange: new Set(),
       timeUpdate: new Set(),
+      modeChange: new Set(),
       error: new Set()
     };
 
@@ -44,6 +48,10 @@ class AudioEngine {
     this.audio.addEventListener('ended', () => {
       this._isPlaying = false;
       this._notify('playState', { isPlaying: false, track: this.currentTrack });
+
+      if (this.playbackMode === 'sequential' || this.playbackMode === 'shuffle') {
+        this.playNext();
+      }
     });
 
     this.audio.addEventListener('timeupdate', () => {
@@ -108,6 +116,76 @@ class AudioEngine {
   onError(callback) {
     this.listeners.error.add(callback);
     return () => this.listeners.error.delete(callback);
+  }
+
+  onModeChange(callback) {
+    this.listeners.modeChange.add(callback);
+    return () => this.listeners.modeChange.delete(callback);
+  }
+
+  setPlaybackMode(mode) {
+    if (!['loop', 'sequential', 'shuffle'].includes(mode)) return;
+    this.playbackMode = mode;
+    if (this.audio) {
+      this.audio.loop = mode === 'loop';
+    }
+    this._notify('modeChange', { mode });
+  }
+
+  getPlaybackMode() {
+    return this.playbackMode;
+  }
+
+  setPlaylist(tracks = []) {
+    this.playlist = Array.isArray(tracks) ? [...tracks] : [];
+    if (this.currentTrack && this.playlist.length > 0) {
+      const idx = this.playlist.findIndex(t => t.url === this.currentTrack.url);
+      if (idx !== -1) this.currentIndex = idx;
+    }
+  }
+
+  getPlaylist() {
+    return this.playlist;
+  }
+
+  playNext() {
+    if (!this.playlist || this.playlist.length === 0) return;
+
+    let nextIndex;
+    if (this.playbackMode === 'shuffle') {
+      if (this.playlist.length === 1) {
+        nextIndex = 0;
+      } else {
+        do {
+          nextIndex = Math.floor(Math.random() * this.playlist.length);
+        } while (nextIndex === this.currentIndex && this.playlist.length > 1);
+      }
+    } else {
+      nextIndex = (this.currentIndex + 1) % this.playlist.length;
+    }
+
+    this.currentIndex = nextIndex;
+    const nextTrack = this.playlist[nextIndex];
+    if (nextTrack) {
+      this.play(nextTrack.url, nextTrack);
+    }
+  }
+
+  playPrevious() {
+    if (!this.playlist || this.playlist.length === 0) return;
+
+    let prevIndex;
+    if (this.playbackMode === 'shuffle') {
+      prevIndex = Math.floor(Math.random() * this.playlist.length);
+    } else {
+      prevIndex = (this.currentIndex - 1 + this.playlist.length) % this.playlist.length;
+    }
+
+    this.currentIndex = prevIndex;
+    const prevTrack = this.playlist[prevIndex];
+    if (prevTrack) {
+      this.play(prevTrack.url, prevTrack);
+    }
   }
 
   /**
@@ -195,6 +273,17 @@ class AudioEngine {
       source: metadata.source || 'cdn'
     };
 
+    if (this.playlist.length > 0) {
+      const idx = this.playlist.findIndex(t => t.url === url);
+      if (idx !== -1) {
+        this.currentIndex = idx;
+      }
+    }
+
+    if (this.audio) {
+      this.audio.loop = (this.playbackMode === 'loop');
+    }
+
     this._notify('trackChange', this.currentTrack);
 
     this.audio.src = url;
@@ -281,6 +370,10 @@ class AudioEngine {
             const data = await res.json();
             if (data && data.categories) {
               this._curatedCache = data.categories;
+              const allTracks = this._curatedCache.flatMap(cat => cat.tracks || []);
+              if (this.playlist.length === 0) {
+                this.setPlaylist(allTracks);
+              }
               return this._curatedCache;
             }
           }

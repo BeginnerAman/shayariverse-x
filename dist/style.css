@@ -1244,6 +1244,7 @@ textarea,
   flex-direction: column;
   gap: 16px;
   width: 100%;
+  padding-bottom: 72px;
 }
 
 /* Sticky Discover Header & Mode Switcher Bar */
@@ -1558,6 +1559,166 @@ textarea,
   100% { opacity: 0.3; }
 }
 
+/* 13.1 Floating Discover Mini Music Bar (Persistent Liquid Glass Pill) */
+.svx-discover-mini-player {
+  position: fixed;
+  bottom: calc(var(--svx-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateZ(0);
+  width: calc(100% - 24px);
+  max-width: calc(var(--svx-max-width) - 24px);
+  background: rgba(14, 14, 26, 0.92);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--svx-glass-radius-pill);
+  padding: 6px 10px 6px 6px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55), 0 0 16px rgba(138, 43, 226, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  contain: layout style;
+  animation: svx-mini-slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes svx-mini-slide-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.svx-mini-player-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.svx-mini-player-art {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #181829, #282845);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--svx-accent-cyan);
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.svx-mini-player-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.svx-mini-player-art.playing {
+  animation: svx-spin 4s linear infinite;
+}
+
+.svx-mini-player-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.svx-mini-player-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--svx-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.svx-mini-player-artist {
+  font-size: 10px;
+  color: var(--svx-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+  margin-top: 1px;
+}
+
+.svx-mini-player-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.svx-mini-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.72);
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.svx-mini-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.svx-mini-btn:active {
+  transform: scale(0.88);
+}
+
+.svx-mini-btn.active-mode {
+  color: var(--svx-accent-cyan);
+  background: rgba(0, 210, 255, 0.12);
+}
+
+.svx-mini-btn-play {
+  background: linear-gradient(135deg, var(--svx-accent-purple), var(--svx-accent-cyan));
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  box-shadow: 0 2px 10px rgba(138, 43, 226, 0.45);
+}
+
+.svx-mini-btn-play:hover {
+  filter: brightness(1.15);
+  color: #ffffff;
+}
+
+.svx-mini-btn-close {
+  color: rgba(255, 255, 255, 0.38);
+  margin-left: 2px;
+}
+
+.svx-mini-btn-close:hover {
+  color: #ff5252;
+  background: rgba(255, 82, 82, 0.12);
+}
+
 /* 14. "Hybrid Magic" Auth & Admin God-Mode (Phase 5) */
 .svx-auth-sheet {
   position: fixed;
@@ -1737,6 +1898,21 @@ textarea,
 
 .svx-suggestion-pill:hover {
   background: rgba(0, 210, 255, 0.25);
+}
+
+.svx-suggestion-pill.svx-login-pill {
+  background: rgba(138, 43, 226, 0.22);
+  border-color: rgba(138, 43, 226, 0.55);
+  color: #d8b4fe;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.svx-suggestion-pill.svx-login-pill:hover {
+  background: rgba(138, 43, 226, 0.38);
+  color: #ffffff;
 }
 
 /* Submit & Toggle Buttons */
@@ -2580,6 +2756,11 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
     border: 1px solid rgba(255, 255, 255, 0.18);
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(138, 43, 226, 0.25);
     background: rgba(14, 14, 24, 0.98);
+  }
+
+  .svx-discover-mini-player {
+    max-width: 580px;
+    bottom: calc(24px + var(--svx-bottom-nav-height) + 12px);
   }
 
   .svx-nav-container {

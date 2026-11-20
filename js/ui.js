@@ -39,7 +39,12 @@ export const ICONS = {
   Pause: `<svg class="svx-icon" viewBox="0 0 24 24" style="fill: currentColor;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`,
   Send: `<svg class="svx-icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
   Loader2: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
-  AlertCircle: `<svg class="svx-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+  AlertCircle: `<svg class="svx-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+  Repeat: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>`,
+  Repeat1: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/><path d="M11 10h1v4"/></svg>`,
+  Shuffle: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>`,
+  SkipBack: `<svg class="svx-icon" viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>`,
+  SkipForward: `<svg class="svx-icon" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>`
 };
 
 /**
@@ -614,6 +619,17 @@ export class SVXMusicController {
     this.searchContainer = document.getElementById('svx-discover-search-container') || this.curatedContainer;
     this.curatedLoaded = false;
 
+    // Discover Floating Mini Player Controls
+    this.miniPlayer = document.getElementById('svx-discover-mini-player');
+    this.miniArt = document.getElementById('svx-mini-player-art');
+    this.miniTitle = document.getElementById('svx-mini-player-title');
+    this.miniArtist = document.getElementById('svx-mini-player-artist');
+    this.miniModeBtn = document.getElementById('svx-mini-player-mode-btn');
+    this.miniPrevBtn = document.getElementById('svx-mini-player-prev-btn');
+    this.miniPlayBtn = document.getElementById('svx-mini-player-play-btn');
+    this.miniNextBtn = document.getElementById('svx-mini-player-next-btn');
+    this.miniCloseBtn = document.getElementById('svx-mini-player-close-btn');
+
     this.init();
   }
 
@@ -647,6 +663,7 @@ export class SVXMusicController {
     });
 
     this.setupAudioSync();
+    this.setupMiniPlayer();
     this.loadCuratedTab();
   }
 
@@ -666,7 +683,115 @@ export class SVXMusicController {
           if (playBtn) playBtn.innerHTML = renderIcon('Play', 'svx-icon-sm');
         }
       });
+
+      if (track) {
+        this.updateMiniPlayerTrack(track, isPlaying);
+      }
     });
+
+    audioEngine.onTrackChange((track) => {
+      if (track) {
+        this.updateMiniPlayerTrack(track, audioEngine.isPlaying());
+      }
+    });
+  }
+
+  setupMiniPlayer() {
+    if (!this.miniPlayer) return;
+
+    this.miniModeBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const current = audioEngine.getPlaybackMode();
+      const nextMode = current === 'loop' ? 'sequential' : current === 'sequential' ? 'shuffle' : 'loop';
+      audioEngine.setPlaybackMode(nextMode);
+
+      let msg = 'Mode: Single Couplet Loop';
+      let icon = 'Repeat1';
+      if (nextMode === 'sequential') {
+        msg = 'Mode: 1-by-1 Sequential Autoplay';
+        icon = 'Repeat';
+      } else if (nextMode === 'shuffle') {
+        msg = 'Mode: Shuffle Random Autoplay';
+        icon = 'Shuffle';
+      }
+      showToast(msg, icon);
+      this.updateMiniPlayerModeUI(nextMode);
+    });
+
+    this.miniPrevBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      audioEngine.playPrevious();
+    });
+
+    this.miniPlayBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const current = audioEngine.getCurrentTrack();
+      if (current) {
+        audioEngine.togglePlayPause(current.url, current);
+      } else {
+        const list = audioEngine.getPlaylist();
+        if (list.length > 0) {
+          audioEngine.play(list[0].url, list[0]);
+        }
+      }
+    });
+
+    this.miniNextBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      audioEngine.playNext();
+    });
+
+    this.miniCloseBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      audioEngine.pause();
+      if (this.miniPlayer) {
+        this.miniPlayer.style.display = 'none';
+      }
+    });
+
+    audioEngine.onModeChange(({ mode }) => {
+      this.updateMiniPlayerModeUI(mode);
+    });
+
+    this.updateMiniPlayerModeUI(audioEngine.getPlaybackMode());
+  }
+
+  updateMiniPlayerModeUI(mode) {
+    if (!this.miniModeBtn) return;
+    let iconName = 'Repeat1';
+    let title = 'Mode: Single Couplet Loop';
+    if (mode === 'sequential') {
+      iconName = 'Repeat';
+      title = 'Mode: 1-by-1 Sequential Autoplay';
+    } else if (mode === 'shuffle') {
+      iconName = 'Shuffle';
+      title = 'Mode: Shuffle Random Autoplay';
+    }
+    this.miniModeBtn.innerHTML = renderIcon(iconName, 'svx-icon-sm');
+    this.miniModeBtn.title = title;
+    this.miniModeBtn.setAttribute('aria-label', title);
+    this.miniModeBtn.classList.toggle('active-mode', mode !== 'loop');
+  }
+
+  updateMiniPlayerTrack(track, isPlaying) {
+    if (!this.miniPlayer || !track) return;
+    this.miniPlayer.style.display = 'flex';
+
+    if (this.miniTitle) this.miniTitle.textContent = track.name || 'Shayari BGM';
+    if (this.miniArtist) this.miniArtist.textContent = track.artist || 'Viral Audio';
+
+    if (this.miniArt) {
+      if (track.art) {
+        this.miniArt.innerHTML = `<img src="${escapeHtml(track.art)}" alt="${escapeHtml(track.name || '')}" loading="lazy">`;
+      } else {
+        this.miniArt.innerHTML = renderIcon('Disc', 'svx-icon-sm');
+      }
+      this.miniArt.classList.toggle('playing', !!isPlaying);
+    }
+
+    if (this.miniPlayBtn) {
+      this.miniPlayBtn.innerHTML = renderIcon(isPlaying ? 'Pause' : 'Play', 'svx-icon-sm');
+    }
   }
 
   switchTab(tab) {
@@ -948,22 +1073,43 @@ export class SVXAuthModal {
       this.handleStatus.className = 'svx-handle-feedback invalid';
       this.handleStatus.innerHTML = `${renderIcon('AlertTriangle', 'svx-icon-sm')}<span>${check.reason || 'Unavailable'}</span>`;
 
-      if (this.handleSuggestions && check.suggestions) {
+      if (this.handleSuggestions) {
         this.handleSuggestions.className = 'svx-suggestions-row active';
-        this.handleSuggestions.innerHTML = `<span>Try:</span>`;
-        check.suggestions.forEach(sug => {
-          const pill = document.createElement('button');
-          pill.type = 'button';
-          pill.className = 'svx-suggestion-pill';
-          pill.textContent = `@${sug}`;
-          pill.addEventListener('click', () => {
-            if (this.handleInput) {
-              this.handleInput.value = sug;
-              this.checkHandleAvailability(sug);
-            }
-          });
-          this.handleSuggestions.appendChild(pill);
+        this.handleSuggestions.innerHTML = '';
+
+        // Smart Login Guidance Pill if handle already exists
+        const loginPill = document.createElement('button');
+        loginPill.type = 'button';
+        loginPill.className = 'svx-suggestion-pill svx-login-pill';
+        loginPill.innerHTML = `${renderIcon('Lock', 'svx-icon-sm')}<span>Already yours? Tap to Login</span>`;
+        loginPill.addEventListener('click', () => {
+          this.switchMode('login');
+          if (this.handleInput) this.handleInput.value = handle;
+          this.pinInput?.focus();
         });
+        this.handleSuggestions.appendChild(loginPill);
+
+        if (check.suggestions && check.suggestions.length > 0) {
+          const tryLabel = document.createElement('span');
+          tryLabel.textContent = 'Or try:';
+          tryLabel.style.color = 'var(--svx-text-muted)';
+          tryLabel.style.margin = '0 2px';
+          this.handleSuggestions.appendChild(tryLabel);
+
+          check.suggestions.forEach(sug => {
+            const pill = document.createElement('button');
+            pill.type = 'button';
+            pill.className = 'svx-suggestion-pill';
+            pill.textContent = `@${sug}`;
+            pill.addEventListener('click', () => {
+              if (this.handleInput) {
+                this.handleInput.value = sug;
+                this.checkHandleAvailability(sug);
+              }
+            });
+            this.handleSuggestions.appendChild(pill);
+          });
+        }
       }
     }
   }
@@ -1065,7 +1211,23 @@ export class SVXAuthModal {
         }
       }
     } catch (err) {
-      await SVXDialog.alert({ title: "Auth Error", message: err.message || "Authentication error." });
+      const errMsg = err?.message || "Authentication error.";
+      if (this.mode === 'register' && errMsg.toLowerCase().includes('already taken')) {
+        const shouldLogin = await SVXDialog.confirm({
+          title: "Handle Already Registered",
+          message: `@${handle} is already registered. If this is your Shayar ID, switch to login to enter your PIN.`,
+          confirmText: "Switch to Login",
+          cancelText: "Change Handle",
+          isDanger: false
+        });
+        if (shouldLogin) {
+          this.switchMode('login');
+          if (this.handleInput) this.handleInput.value = handle;
+          this.pinInput?.focus();
+          return;
+        }
+      }
+      await SVXDialog.alert({ title: "Auth Error", message: errMsg });
     } finally {
       if (this.submitBtn) this.submitBtn.disabled = false;
     }

@@ -128,6 +128,46 @@
           <!-- Populated dynamically via live search -->
         </div>
 
+        <!-- Floating Discover Mini Music Bar (Sequential, Shuffle, Loop) -->
+        <div id="svx-discover-mini-player" class="svx-discover-mini-player" style="display: none;" role="region" aria-label="Music Player Controls">
+          <div class="svx-mini-player-track">
+            <div id="svx-mini-player-art" class="svx-mini-player-art" aria-hidden="true">
+              <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></svg>
+            </div>
+            <div class="svx-mini-player-info">
+              <span id="svx-mini-player-title" class="svx-mini-player-title">Track Name</span>
+              <span id="svx-mini-player-artist" class="svx-mini-player-artist">Artist</span>
+            </div>
+          </div>
+
+          <div class="svx-mini-player-controls">
+            <!-- Mode Toggle Button (Loop, Sequential, Shuffle) -->
+            <button id="svx-mini-player-mode-btn" class="svx-mini-btn" type="button" aria-label="Playback Mode" title="Playback Mode">
+              <svg id="svx-mini-player-mode-icon" class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+            </button>
+
+            <!-- Previous Button -->
+            <button id="svx-mini-player-prev-btn" class="svx-mini-btn" type="button" aria-label="Previous Track" title="Previous Track">
+              <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+            </button>
+
+            <!-- Play / Pause Main Button -->
+            <button id="svx-mini-player-play-btn" class="svx-mini-btn svx-mini-btn-play" type="button" aria-label="Play or Pause">
+              <svg id="svx-mini-player-play-icon" class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+
+            <!-- Next Button -->
+            <button id="svx-mini-player-next-btn" class="svx-mini-btn" type="button" aria-label="Next Track" title="Next Track">
+              <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+            </button>
+
+            <!-- Close Button -->
+            <button id="svx-mini-player-close-btn" class="svx-mini-btn svx-mini-btn-close" type="button" aria-label="Close Mini Player" title="Close">
+              <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+
       </div>
     </section>
 

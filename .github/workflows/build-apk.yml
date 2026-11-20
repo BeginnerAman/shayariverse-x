@@ -79,7 +79,7 @@ jobs:
           gh release create ${{ env.APP_TAG }} build-artifacts/ShayariVerse-X-${{ env.APP_TAG }}.apk build-artifacts/ShayariVerse-X-Latest.apk \
             --title "ShayariVerse X ${{ env.APP_TAG }}" \
             --notes "### ShayariVerse X ${{ env.APP_TAG }} Release Notes
-          - **Professional Android Gesture and Hardware Back Navigation**: Back gesture and physical button now seamlessly dismiss active dialogs, bottom sheets, composer, and sub-views first, returning to the home feed before smooth app minimization.
-          - **Optimized Social Interaction Gate**: Refined like interaction state handling for guest sessions, ensuring count updates reflect verified user actions accurately.
-          - **Curated 199-Track Poetic Music Catalog**: High-speed CDN audio streaming across 5 distinct mood categories with seamless couplet looping and silky fades.
-          - **Ultra-Lightweight APK (~4.5 MB)**: Optimized web bundle with cloud-hosted audio keeps storage footprint ultra-lean."
+          - **Floating Discover Mini Music Bar**: Persistent liquid glass floating player pill in Discover view with track art, title, and full playback controls.
+          - **Triple Playback Modes**: Instant toggling between Sequential (1-by-1 continuous autoplay across 199 curated tracks), Shuffle (random continuous playback), and Single Couplet Loop.
+          - **Smart Shayar ID Guidance**: Proactive inline detection for registered handles with seamless one-tap transition to login, eliminating registration friction when upgrading devices or updating the app.
+          - **Zero-Drain Singleton Architecture**: High-performance audio engine ensuring zero idle CPU or battery drain, seamless track transitions, and silky fades."
