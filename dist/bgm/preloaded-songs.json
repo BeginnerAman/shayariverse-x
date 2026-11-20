@@ -187,6 +187,16 @@
           "mood": "romantic",
           "art": null,
           "source": "cdn"
+        },
+        {
+          "id": "svx-orig-019",
+          "name": "Poetic Transition",
+          "artist": "ShayariVerse Classic",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/poetic-transition.mp3",
+          "duration": 10,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
         }
       ]
     },
@@ -451,6 +461,146 @@
           "artist": "Ambient Rain Strings",
           "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/rainfall-sukoon.mp3",
           "duration": 13,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-027",
+          "name": "Aim Motivation Theme",
+          "artist": "Instrumental Focus",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/aim-motivation-theme.mp3",
+          "duration": 37,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-028",
+          "name": "Magadheera Epic Theme",
+          "artist": "M. M. Keeravani",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/magadheera-epic-theme.mp3",
+          "duration": 44,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-029",
+          "name": "Peaceful Nature Breeze",
+          "artist": "Aesthetic Sukoon",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/peaceful-nature-breeze.mp3",
+          "duration": 38,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-030",
+          "name": "Mera Dil Yeh Pukaare Aaja",
+          "artist": "Lata Mangeshkar",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/mera-dil-yeh-pukaare-aaja-lata.mp3",
+          "duration": 40,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-031",
+          "name": "Na Gall Mere Vas Di Rahi",
+          "artist": "Satinder Sartaaj",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/na-gall-mere-vas-di-rahi-sartaaj.mp3",
+          "duration": 44,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-032",
+          "name": "Never Blame Anyone",
+          "artist": "Gentle Strings",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/never-blame-anyone-in-life.mp3",
+          "duration": 27,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-033",
+          "name": "Sabki Apni Pasand",
+          "artist": "Contemplative Harmony",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/sabki-apni-pasand-hai.mp3",
+          "duration": 43,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-034",
+          "name": "So I Choose Peace",
+          "artist": "Sukoon Ambient",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/so-i-choose-peace.mp3",
+          "duration": 43,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-035",
+          "name": "Sammi Meri Waar (Emotional Edit)",
+          "artist": "Quratulain Balouch",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/sammi-meri-waar-emotional.mp3",
+          "duration": 27,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-036",
+          "name": "Sukoon Nature Peaceful Vibes",
+          "artist": "Sufi Instrumental",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/sukoon-nature-peaceful-vibes.mp3",
+          "duration": 28,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-037",
+          "name": "Ab Khud Ke Paas Hi Rehna Hai",
+          "artist": "Sukoon Strings",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/ab-khud-ke-paas-hi-rehna-hai.mp3",
+          "duration": 37,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-038",
+          "name": "Papa Ki Playlist (Retro Gold Vol 1)",
+          "artist": "Golden Melodies",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/papa-ki-playlist-vol-1.mp3",
+          "duration": 17,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-039",
+          "name": "Papa Ki Playlist (Retro Gold Vol 2)",
+          "artist": "Golden Melodies",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/papa-ki-playlist-vol-2.mp3",
+          "duration": 28,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-040",
+          "name": "Udaarian (Soulful Drop)",
+          "artist": "Satinder Sartaaj",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/udaarian-drop-part.mp3",
+          "duration": 31,
           "mood": "calm",
           "art": null,
           "source": "cdn"
@@ -978,6 +1128,166 @@
           "artist": "Sad Couplet Melody",
           "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/hum-bhi-satane-par-utar-aaye.mp3",
           "duration": 19,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-053",
+          "name": "Deep Thoughts Couplet",
+          "artist": "Shayari BGM",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/deep-thoughts-couplet.mp3",
+          "duration": 18,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-054",
+          "name": "Dhurandhar Soul Edit",
+          "artist": "Arijit Singh",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/dhurandhar-arijit-singh.mp3",
+          "duration": 36,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-055",
+          "name": "Ego Kills Love (Sad Couplet)",
+          "artist": "Shayari Verse Dard",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/ego-kills-love-sad-couplet.mp3",
+          "duration": 24,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-056",
+          "name": "Few People Understand",
+          "artist": "Quiet Reflections",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/few-people-understand-bgm.mp3",
+          "duration": 14,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-057",
+          "name": "Main Patta Tha Woh Ped Thi",
+          "artist": "Poetic Strings",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/main-patta-tha-woh-ped-thi.mp3",
+          "duration": 60,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-058",
+          "name": "Deep Feelings In Modern Times",
+          "artist": "Melodic Melancholy",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/generation-deep-feelings.mp3",
+          "duration": 14,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-059",
+          "name": "Jo Sehna Seekh Jaate Hain",
+          "artist": "Heartbreak Solitude",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/jo-sehna-seekh-jaate-hain.mp3",
+          "duration": 17,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-060",
+          "name": "Kami Hai Mujhme Hazaron",
+          "artist": "Soulful Couplet",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/kami-hai-mujhme-hazaron.mp3",
+          "duration": 20,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-061",
+          "name": "Kitaab (Female Soul Version)",
+          "artist": "Acoustic Vocal",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/kitaab-female-version-lyrics.mp3",
+          "duration": 32,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-062",
+          "name": "Log Badal Jaate Hain",
+          "artist": "Deep Piano & Violins",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/log-badal-jaate-hain-bgm.mp3",
+          "duration": 40,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-063",
+          "name": "Nobody Truly Satisfied",
+          "artist": "Poetic Piano Melancholy",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/nobody-truly-satisfied.mp3",
+          "duration": 49,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-064",
+          "name": "Reality Breakup Strings",
+          "artist": "Dard BGM",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/reality-breakup-strings.mp3",
+          "duration": 10,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-065",
+          "name": "Sheesha (Aesthetic Lyrics)",
+          "artist": "Mahoor",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/sheesha-aesthetic-lyrics-status.mp3",
+          "duration": 32,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-066",
+          "name": "Sheesha (Sad Lo-Fi Edit)",
+          "artist": "Mahoor",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/sheesha-sad-lofi-edit.mp3",
+          "duration": 28,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-067",
+          "name": "Unanswered Questions",
+          "artist": "Reflective Strings",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/some-questions-no-answers.mp3",
+          "duration": 38,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-068",
+          "name": "Tujhe Pyaar Kiya Toh (Slowed)",
+          "artist": "Emotional BGM",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/tujhe-pyaar-kiya-toh-slowed.mp3",
+          "duration": 23,
           "mood": "sad",
           "art": null,
           "source": "cdn"
@@ -1798,6 +2108,256 @@
           "mood": "romantic",
           "art": null,
           "source": "cdn"
+        },
+        {
+          "id": "svx-rom-082",
+          "name": "Dheere Se Deedar",
+          "artist": "Romantic Couplet",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/dheere-se-tumhara-deedar.mp3",
+          "duration": 22,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-083",
+          "name": "Dil Karda Main Tenu Dekhi Jaavan",
+          "artist": "Romantic Melodies",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/dil-karda-tenu-vekhi-jaavan.mp3",
+          "duration": 25,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-084",
+          "name": "Ek Mulaqat Zaroori Hai",
+          "artist": "Altamash Faridi",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/ek-mulaqat-trending-lyrics.mp3",
+          "duration": 51,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-085",
+          "name": "Timeless Classic Love Anthem",
+          "artist": "Retro Bollywood",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/timeless-classic-love-anthem.mp3",
+          "duration": 59,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-086",
+          "name": "Uske Hone Se Sab Kuch",
+          "artist": "Romantic Couplet Strings",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/uske-hone-se-sab-kuch.mp3",
+          "duration": 17,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-087",
+          "name": "Jeene Laga Hoon (Slowed+Reverb)",
+          "artist": "Atif Aslam, Shreya Ghoshal",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/jeene-laga-hoon-slowed-reverb.mp3",
+          "duration": 29,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-088",
+          "name": "Mann Mera (Acoustic Edit)",
+          "artist": "Gajendra Verma",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/mann-mera-acoustic-edit.mp3",
+          "duration": 41,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-089",
+          "name": "Mann Mera (Slowed Vibe)",
+          "artist": "Gajendra Verma",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/mann-mera-slowed-vibe.mp3",
+          "duration": 20,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-090",
+          "name": "Meri Zindagi Hai Tu",
+          "artist": "Jubin Nautiyal, Neeti Mohan",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/meri-zindagi-hai-tu-aisi-dillagi.mp3",
+          "duration": 23,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-091",
+          "name": "Sweet Couple Melody",
+          "artist": "Romantic Lo-Fi",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/sweet-couple-melody.mp3",
+          "duration": 17,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-092",
+          "name": "Keh Raha Hai Mera Dil",
+          "artist": "Kumar Sanu, Alka Yagnik",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/keh-raha-hai-mera-dil.mp3",
+          "duration": 40,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-093",
+          "name": "Rehte Ho Aake Jo (Lo-Fi)",
+          "artist": "Atif Aslam",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/rehte-ho-aake-jo-jeene-laga-hoon.mp3",
+          "duration": 45,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-094",
+          "name": "Ruposh Acoustic Edit",
+          "artist": "Wajhi Farooki",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/ruposh-aesthetic-edit.mp3",
+          "duration": 35,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-095",
+          "name": "Tera Chehra (Aesthetic)",
+          "artist": "Adnan Sami",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/tera-chehra-aesthetic-lyrics.mp3",
+          "duration": 37,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-096",
+          "name": "Tera Mera Hai Pyaar Amar",
+          "artist": "Lata Mangeshkar",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/tera-mera-hai-pyaar-amar-slowed.mp3",
+          "duration": 39,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-097",
+          "name": "Tere Mast Mast Do Nain (Aesthetic)",
+          "artist": "Rahat Fateh Ali Khan",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/tere-mast-mast-do-nain-rahat.mp3",
+          "duration": 23,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-098",
+          "name": "Teri Nazron Ke Sadqe (Ruposh)",
+          "artist": "Wajhi Farooki",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/teri-nazron-ke-sadqe-ruposh.mp3",
+          "duration": 56,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-099",
+          "name": "Jaan Waar Dunga (Acoustic)",
+          "artist": "Wajhi Farooki",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/jaan-waar-dunga-acoustic.mp3",
+          "duration": 23,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-100",
+          "name": "Mere Saamne Wali Khidki Mein",
+          "artist": "Kishore Kumar",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/mere-saamne-wali-khidki-mein.mp3",
+          "duration": 33,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-101",
+          "name": "Aashiq Tera (Tujhe Le Jayega)",
+          "artist": "Altamash Faridi",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/aashiq-tera-tujhe-le-jayega.mp3",
+          "duration": 27,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-102",
+          "name": "Muskurane Ka Bahana Ho Tum",
+          "artist": "Poetic Romance",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/muskurane-ka-bahana-ho-tum.mp3",
+          "duration": 20,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-103",
+          "name": "Salaam Aaya (Veer Edit)",
+          "artist": "Roop Kumar Rathod, Shreya Ghoshal",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/salaam-aaya-veer-aesthetic.mp3",
+          "duration": 60,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-104",
+          "name": "Pyaar Ka Ehsaas",
+          "artist": "Romantic Melodies",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/pyaar-ka-ehsaas-bgm.mp3",
+          "duration": 13,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-105",
+          "name": "Khairiyat (Tumhari Tasveer)",
+          "artist": "Arijit Singh",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/khairiyat-arijit-singh-short.mp3",
+          "duration": 60,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-106",
+          "name": "Meethi Muskaan",
+          "artist": "Aesthetic Flute & Acoustic",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/meethi-muskaan-love-vibe.mp3",
+          "duration": 24,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
         }
       ]
     },
@@ -2023,6 +2583,76 @@
           "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/we-all-grew-up-school-days.mp3",
           "duration": 10,
           "mood": "lofi",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-aes-023",
+          "name": "Anime Poetry Vibe",
+          "artist": "ShayariVerse Lofi",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/anime-poetry-vibe.mp3",
+          "duration": 60,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-aes-024",
+          "name": "Aarzu (Aesthetic)",
+          "artist": "Aesthetic BGM",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/aarzu-aesthetic-lyrics.mp3",
+          "duration": 29,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-aes-025",
+          "name": "Nature Heals Everything",
+          "artist": "Aesthetic Waves",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/nature-heals-everything.mp3",
+          "duration": 43,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-aes-026",
+          "name": "Soft Piano & Strings",
+          "artist": "Soulful Harmony",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/soft-piano-and-strings.mp3",
+          "duration": 48,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-aes-027",
+          "name": "Cyber Poetic Focus",
+          "artist": "Ambient Chill",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/cyber-poetic-focus.mp3",
+          "duration": 20,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-aes-028",
+          "name": "Not Everyone Understands It",
+          "artist": "Aesthetic Calm",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/not-everyone-understands-it.mp3",
+          "duration": 41,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-aes-029",
+          "name": "Nostalgic Strings",
+          "artist": "Classic Melodies",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/they-dont-make-songs-like-this.mp3",
+          "duration": 36,
+          "mood": "calm",
           "art": null,
           "source": "cdn"
         }
