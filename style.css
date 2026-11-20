@@ -170,23 +170,39 @@ textarea,
   width: 100%;
   max-width: var(--svx-max-width);
   margin: 0 auto;
-  padding: 0 16px calc(var(--svx-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 24px) 16px;
+  padding: calc(var(--svx-top-bar-height) + env(safe-area-inset-top, 0px) + 12px) 16px calc(var(--svx-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 24px) 16px;
   display: flex;
   flex-direction: column;
 }
 
-/* Sticky Top App Bar */
+/* Sticky Top App Bar (Edge-to-Edge Full Width Bar on Mobile & Tablet) */
 .svx-top-bar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: calc(var(--svx-top-bar-height) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  background: rgba(8, 8, 15, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 100;
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+
+.svx-top-bar-container {
+  width: 100%;
+  max-width: var(--svx-max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  margin: 0 -16px;
-  background: rgba(8, 8, 15, 0.97);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 16px;
+  height: 100%;
 }
 
 .svx-brand-lockup {
@@ -493,7 +509,9 @@ textarea,
 .svx-placeholder-desc {
   font-size: 14px;
   color: var(--svx-text-muted);
-  max-width: 300px;
+  max-width: 340px;
+  margin: 0 auto;
+  text-align: center;
   line-height: 1.5;
 }
 
@@ -1250,7 +1268,7 @@ textarea,
 /* Sticky Discover Header & Mode Switcher Bar */
 .svx-discover-sticky-bar {
   position: sticky;
-  top: var(--svx-top-bar-height, 60px);
+  top: calc(var(--svx-top-bar-height, 60px) + env(safe-area-inset-top, 0px));
   z-index: 90;
   background: rgba(8, 8, 15, 0.98);
   display: flex;
@@ -2409,6 +2427,12 @@ textarea,
   width: 100%;
 }
 
+.svx-author-shayari-list .svx-placeholder-desc {
+  margin: 20px auto;
+  text-align: center;
+  align-self: center;
+}
+
 /* ==========================================================================
    17. HD Share Status Image Stage & Toast (Phase 6)
    ========================================================================== */
@@ -2740,7 +2764,7 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   }
 
   .svx-main-viewport {
-    padding-top: 24px;
+    padding-top: calc(var(--svx-top-bar-height) + env(safe-area-inset-top, 0px) + 20px);
     padding-bottom: 120px;
   }
 

@@ -79,7 +79,8 @@ jobs:
           gh release create ${{ env.APP_TAG }} build-artifacts/ShayariVerse-X-${{ env.APP_TAG }}.apk build-artifacts/ShayariVerse-X-Latest.apk \
             --title "ShayariVerse X ${{ env.APP_TAG }}" \
             --notes "### ShayariVerse X ${{ env.APP_TAG }} Release Notes
+          - **Edge-to-Edge Tablet Top App Bar**: Fixed full-width top navigation patti on tablets and large screens, harmonizing header geometry seamlessly with the bottom dock.
+          - **Precision Centered Profile States**: Perfect horizontal dead-centering for author empty states and notices across both mobile and tablet displays.
           - **Floating Discover Mini Music Bar**: Persistent liquid glass floating player pill in Discover view with track art, title, and full playback controls.
           - **Triple Playback Modes**: Instant toggling between Sequential (1-by-1 continuous autoplay across 199 curated tracks), Shuffle (random continuous playback), and Single Couplet Loop.
-          - **Smart Shayar ID Guidance**: Proactive inline detection for registered handles with seamless one-tap transition to login, eliminating registration friction when upgrading devices or updating the app.
-          - **Zero-Drain Singleton Architecture**: High-performance audio engine ensuring zero idle CPU or battery drain, seamless track transitions, and silky fades."
+          - **Smart Shayar ID Guidance**: Proactive inline detection for registered handles with seamless one-tap transition to login."

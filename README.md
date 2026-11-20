@@ -26,8 +26,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/BeginnerAman/shayariverse-x/releases/download/v1.1.9/ShayariVerse-X-v1.1.9.apk">
-    <img src="https://img.shields.io/badge/Download_APK-v1.1.9_Release-1f6feb?style=for-the-badge&logo=android&logoColor=white&labelColor=0d1117" alt="Download APK" />
+  <a href="https://github.com/BeginnerAman/shayariverse-x/releases/download/v1.2.0/ShayariVerse-X-v1.2.0.apk">
+    <img src="https://img.shields.io/badge/Download_APK-v1.2.0_Release-1f6feb?style=for-the-badge&logo=android&logoColor=white&labelColor=0d1117" alt="Download APK" />
   </a>
 </p>
 
@@ -73,7 +73,7 @@ Engineered with a **0ms optimistic data pipeline**, ShayariVerse X delivers nati
 
 The latest production APK is available directly via GitHub Releases:
 
-1. Download **[ShayariVerse-X-v1.1.9.apk](https://github.com/BeginnerAman/shayariverse-x/releases/download/v1.1.9/ShayariVerse-X-v1.1.9.apk)**.
+1. Download **[ShayariVerse-X-v1.2.0.apk](https://github.com/BeginnerAman/shayariverse-x/releases/download/v1.2.0/ShayariVerse-X-v1.2.0.apk)**.
 2. Open the `.apk` file on your Android device and confirm installation.
 3. Launch **ShayariVerse X**.
 

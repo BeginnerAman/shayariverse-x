@@ -1913,7 +1913,7 @@ export class SVXProfileController {
       const listContainer = document.getElementById('svx-author-cards-container');
       if (listContainer) {
         if (authorShayaris.length === 0) {
-          listContainer.innerHTML = `<div class="svx-placeholder-desc" style="text-align: center; padding: 24px;">No Shayaris posted yet.</div>`;
+          listContainer.innerHTML = `<div class="svx-placeholder-desc" style="text-align: center; margin: 16px auto; padding: 24px 16px;">No Shayaris posted yet.</div>`;
         } else {
           authorShayaris.forEach(s => {
             const card = createFeedCardElement({
@@ -2041,7 +2041,7 @@ export class SVXProfileController {
     if (listContainer) {
       if (userShayaris.length === 0) {
         const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
-        listContainer.innerHTML = `<div class="svx-placeholder-desc" style="text-align: center; padding: 24px;">${isOffline ? 'Offline Mode • Connect to internet to sync your Shayaris.' : "You haven't posted any Shayari yet. Tap + Create to compose your first piece."}</div>`;
+        listContainer.innerHTML = `<div class="svx-placeholder-desc" style="text-align: center; margin: 16px auto; padding: 24px 16px;">${isOffline ? 'Offline Mode • Connect to internet to sync your Shayaris.' : "You haven't posted any Shayari yet. Tap + Create to compose your first piece."}</div>`;
       } else {
         userShayaris.forEach(s => {
           const card = createFeedCardElement({
