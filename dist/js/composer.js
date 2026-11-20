@@ -109,6 +109,9 @@ export class SVXComposerModal {
     this.modal = document.getElementById('svx-composer-modal');
     this.textarea = document.getElementById('svx-composer-textarea');
     this.previewCard = document.getElementById('svx-composer-preview-card');
+    this.previewAvatar = document.getElementById('svx-composer-preview-avatar');
+    this.previewName = document.getElementById('svx-composer-preview-name');
+    this.previewHandle = document.getElementById('svx-composer-preview-handle');
     this.previewText = document.getElementById('svx-composer-preview-text');
     this.previewSongTitle = document.getElementById('svx-composer-song-title');
     this.previewSongArtist = document.getElementById('svx-composer-song-artist');
@@ -128,11 +131,36 @@ export class SVXComposerModal {
     this.selectedMood = 'purple';
     this.selectedFont = 'nastaliq';
     this.attachedSong = this.getRandomTrack();
-    if (this.previewAudioPill && this.attachedSong?.url) {
-      this.previewAudioPill.setAttribute('data-song-url', this.attachedSong.url);
-    }
+    this.setAttachedSong(this.attachedSong);
+    this.updateUserIdentity();
 
     this.initEvents();
+  }
+
+  updateUserIdentity() {
+    const user = db.getCurrentUser();
+    if (user) {
+      const name = user.display_name || user.handle || 'Shayar';
+      const handle = `@${user.handle || 'shayar'}`;
+      let initials = user.avatar_initials;
+      if (!initials) {
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          initials = (parts[0][0] + parts[1][0]).toUpperCase();
+        } else if (name.length >= 2) {
+          initials = name.slice(0, 2).toUpperCase();
+        } else {
+          initials = name.toUpperCase() || 'SV';
+        }
+      }
+      if (this.previewAvatar) this.previewAvatar.textContent = initials;
+      if (this.previewName) this.previewName.textContent = name;
+      if (this.previewHandle) this.previewHandle.textContent = handle;
+    } else {
+      if (this.previewAvatar) this.previewAvatar.textContent = 'SV';
+      if (this.previewName) this.previewName.textContent = 'Shayar';
+      if (this.previewHandle) this.previewHandle.textContent = '@shayar';
+    }
   }
 
   getRandomTrack() {
@@ -142,33 +170,38 @@ export class SVXComposerModal {
     }
     const fallbackTracks = [
       {
-        name: "Tum Hi Ho (Slowed + Reverb)",
+        id: "tr-alfaaz",
+        name: "Alfaaz",
+        artist: "Hamza Malik & Zain Zohaib",
+        url: "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/alfaaz-hamza-malik-zain-zohaib.mp3",
+        source: "cdn"
+      },
+      {
+        id: "tr-phir-le-aaya",
+        name: "Phir Le Aaya Dil",
         artist: "Arijit Singh",
-        url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/slowed-reverb-tum-hi-ho.mp3",
+        url: "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/phir-le-aaya-dil.mp3",
         source: "cdn"
       },
       {
-        name: "Dil Ka Aalam",
-        artist: "Kumar Sanu (Aashiqui)",
-        url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/tracks/dil-ka-aalam.mp3",
+        id: "tr-kahani-suno",
+        name: "Kahani Suno",
+        artist: "Kaifi Khalil",
+        url: "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/kahani-suno-mujhe-pyaar-hua-tha.mp3",
         source: "cdn"
       },
       {
-        name: "Pehla Nasha (Acoustic Guitar)",
-        artist: "Udit Narayan & Sadhana Sargam",
-        url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/tracks/pehla-nasha.mp3",
+        id: "tr-afreen",
+        name: "Afreen Afreen (Slowed)",
+        artist: "Rahat Fateh Ali Khan & Momina",
+        url: "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/afreen-afreen-slowed.mp3",
         source: "cdn"
       },
       {
-        name: "Jeena Jeena (Flute & Piano)",
-        artist: "Atif Aslam (Badlapur)",
-        url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/tracks/jeena-jeena.mp3",
-        source: "cdn"
-      },
-      {
-        name: "Kesariya (Lofi Chill)",
-        artist: "Pritam & Arijit Singh",
-        url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/kesariya-lofi.mp3",
+        id: "tr-rabba",
+        name: "Rabba Lakh Lakh Shukar Manaawa",
+        artist: "Nusrat Fateh Ali Khan",
+        url: "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/rabba-lakh-lakh-shukar-manaawa-nfak.mp3",
         source: "cdn"
       }
     ];
@@ -260,6 +293,8 @@ export class SVXComposerModal {
     if (!this.modal) return;
     this.modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+    // Sync author identity on live card preview
+    this.updateUserIdentity();
     // If opening for a fresh post and no song attached yet, pick a random track from catalog
     if (!this.editingShayariId && (!this.attachedSong || !this.attachedSong.url)) {
       this.setAttachedSong(this.getRandomTrack());
@@ -270,6 +305,7 @@ export class SVXComposerModal {
 
   openForEdit(shayari) {
     this.editingShayariId = shayari.id;
+    this.updateUserIdentity();
     if (this.textarea) this.textarea.value = shayari.content;
     this.setMoodTheme(shayari.mood_theme || 'purple');
     this.setFontStyle(shayari.font_style || 'nastaliq');
