@@ -1,11 +1,19 @@
-// ShayariVerse X (SVX) — Native Android Version Synchronizer
+// ShayariVerse X (SVX) — Native Android Version Synchronizer & Permissions Injector
 // Synchronizes android/app/build.gradle versionCode & versionName with package.json
 import fs from 'fs';
 import path from 'path';
+import { applyMediaSessionPatch } from './patch-media-session.js';
 
 const ROOT_DIR = process.cwd();
 const pkgPath = path.join(ROOT_DIR, 'package.json');
 const gradlePath = path.join(ROOT_DIR, 'android', 'app', 'build.gradle');
+
+// Apply plugin patches first
+try {
+  applyMediaSessionPatch();
+} catch (err) {
+  console.warn('[SVX Version] Warning applying media session patch:', err.message);
+}
 
 if (fs.existsSync(pkgPath) && fs.existsSync(gradlePath)) {
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
@@ -19,17 +27,28 @@ if (fs.existsSync(pkgPath) && fs.existsSync(gradlePath)) {
   fs.writeFileSync(gradlePath, content, 'utf8');
   console.log(`[SVX Version] Successfully updated android/app/build.gradle to versionCode ${versionCode}, versionName "${pkg.version}"`);
 
-  // Inject WAKE_LOCK permission so Android OS PowerManager does not kill background audio after 5 minutes
+  // Inject required permissions for Android 14 Foreground Audio Service
   const manifestPath = path.join(ROOT_DIR, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
   if (fs.existsSync(manifestPath)) {
     let manifest = fs.readFileSync(manifestPath, 'utf8');
-    if (!manifest.includes('android.permission.WAKE_LOCK')) {
-      manifest = manifest.replace(
-        '<application',
-        '    <uses-permission android:name="android.permission.WAKE_LOCK" />\n    <application'
-      );
+    const requiredPermissions = [
+      'android.permission.WAKE_LOCK',
+      'android.permission.FOREGROUND_SERVICE',
+      'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK'
+    ];
+    let modified = false;
+    for (const perm of requiredPermissions) {
+      if (!manifest.includes(perm)) {
+        manifest = manifest.replace(
+          '<application',
+          `    <uses-permission android:name="${perm}" />\n    <application`
+        );
+        modified = true;
+      }
+    }
+    if (modified) {
       fs.writeFileSync(manifestPath, manifest, 'utf8');
-      console.log('[SVX Version] Injected WAKE_LOCK permission to AndroidManifest.xml');
+      console.log('[SVX Version] Injected required audio permissions to AndroidManifest.xml');
     }
   }
 } else {

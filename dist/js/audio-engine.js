@@ -22,6 +22,7 @@ class AudioEngine {
     this._curatedCache = null;
     this._fadeTimer = null;
     this._mediaSessionWired = false;
+    this._nativeMediaActionsWired = false;
     this._wakeLock = null;
     this._audioCtx = null;
     this._keepAliveGain = null;
@@ -65,6 +66,10 @@ class AudioEngine {
       if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
+      const nativeMS = this._getNativeMediaSession();
+      if (nativeMS) {
+        nativeMS.setPlaybackState({ playbackState: 'paused' }).catch(() => {});
+      }
       this._notify('playState', { isPlaying: false, track: this.currentTrack });
     });
 
@@ -77,6 +82,10 @@ class AudioEngine {
       } else {
         this._stopAudioKeepAlive();
         this._releaseWakeLock();
+        const nativeMS = this._getNativeMediaSession();
+        if (nativeMS) {
+          nativeMS.setPlaybackState({ playbackState: 'none' }).catch(() => {});
+        }
       }
     });
 
@@ -98,6 +107,15 @@ class AudioEngine {
             });
           } catch {}
         }
+
+        const nativeMS = this._getNativeMediaSession();
+        if (nativeMS) {
+          nativeMS.setPositionState({
+            duration: this.audio.duration || 0,
+            playbackRate: this.audio.playbackRate || 1,
+            position: this.audio.currentTime || 0
+          }).catch(() => {});
+        }
       }
     });
 
@@ -106,6 +124,10 @@ class AudioEngine {
       this._isPlaying = false;
       this._stopAudioKeepAlive();
       this._releaseWakeLock();
+      const nativeMS = this._getNativeMediaSession();
+      if (nativeMS) {
+        nativeMS.setPlaybackState({ playbackState: 'none' }).catch(() => {});
+      }
       this._notify('playState', { isPlaying: false, track: this.currentTrack });
       this._notify('error', e);
     });
@@ -202,40 +224,90 @@ class AudioEngine {
     } catch {}
   }
 
-  _updateMediaSession(track) {
-    if (typeof navigator === 'undefined' || !('mediaSession' in navigator) || !track) return;
-    try {
-      const artUrl = track.art || 'https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/assets/icon.png';
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: track.name || 'Shayari BGM',
-        artist: track.artist || 'ShayariVerse X',
-        album: 'ShayariVerse X Poetic Beats',
-        artwork: [
-          { src: artUrl, sizes: '512x512', type: 'image/png' }
-        ]
-      });
+  _getNativeMediaSession() {
+    if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.MediaSession) {
+      return window.Capacitor.Plugins.MediaSession;
+    }
+    return null;
+  }
 
-      if (!this._mediaSessionWired) {
-        this._mediaSessionWired = true;
-        navigator.mediaSession.setActionHandler('play', () => {
-          if (this.currentTrack) {
-            this.audio.play().catch(() => {});
-          }
+  async _updateMediaSession(track) {
+    if (!track) return;
+    const trackTitle = track.name || 'Shayari BGM';
+    const trackArtist = track.artist || 'ShayariVerse X';
+
+    // 1. Browser MediaSession API (Desktop / Web browsers)
+    if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+      try {
+        const artUrl = track.art || 'https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/assets/icon.png';
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: trackTitle,
+          artist: trackArtist,
+          album: 'ShayariVerse X',
+          artwork: [
+            { src: artUrl, sizes: '512x512', type: 'image/png' }
+          ]
         });
-        navigator.mediaSession.setActionHandler('pause', () => {
-          this.pause(true);
-        });
-        navigator.mediaSession.setActionHandler('nexttrack', () => {
-          this.playNext();
-        });
-        navigator.mediaSession.setActionHandler('previoustrack', () => {
-          this.playPrevious();
-        });
+
+        if (!this._mediaSessionWired) {
+          this._mediaSessionWired = true;
+          navigator.mediaSession.setActionHandler('play', () => {
+            if (this.currentTrack) {
+              this.audio.play().catch(() => {});
+            }
+          });
+          navigator.mediaSession.setActionHandler('pause', () => {
+            this.pause(true);
+          });
+          navigator.mediaSession.setActionHandler('nexttrack', () => {
+            this.playNext();
+          });
+          navigator.mediaSession.setActionHandler('previoustrack', () => {
+            this.playPrevious();
+          });
+        }
+
+        navigator.mediaSession.playbackState = this._isPlaying ? 'playing' : 'paused';
+      } catch (e) {
+        console.warn('[SVX Audio] Web MediaSession notice:', e);
       }
+    }
 
-      navigator.mediaSession.playbackState = this._isPlaying ? 'playing' : 'paused';
-    } catch (e) {
-      console.warn('[SVX Audio] MediaSession update error:', e);
+    // 2. Native Android MediaSession Foreground Service (100% Silent, Continuous Playback)
+    const nativeMS = this._getNativeMediaSession();
+    if (nativeMS) {
+      try {
+        await nativeMS.setMetadata({
+          title: trackTitle,
+          artist: trackArtist,
+          album: 'ShayariVerse X',
+          artwork: [] // Silent, lightweight, zero main-thread network blocking
+        });
+        await nativeMS.setPlaybackState({ playbackState: this._isPlaying ? 'playing' : 'paused' });
+
+        if (!this._nativeMediaActionsWired) {
+          this._nativeMediaActionsWired = true;
+          nativeMS.setActionHandler({ action: 'play' }, () => {
+            if (this.currentTrack) {
+              this.audio.play().catch(() => {});
+            }
+          }).catch(() => {});
+          nativeMS.setActionHandler({ action: 'pause' }, () => {
+            this.pause(true);
+          }).catch(() => {});
+          nativeMS.setActionHandler({ action: 'nexttrack' }, () => {
+            this.playNext();
+          }).catch(() => {});
+          nativeMS.setActionHandler({ action: 'previoustrack' }, () => {
+            this.playPrevious();
+          }).catch(() => {});
+          nativeMS.setActionHandler({ action: 'stop' }, () => {
+            this.pause(true);
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('[SVX Audio] Native MediaSession notice:', err);
+      }
     }
   }
 
@@ -511,6 +583,10 @@ class AudioEngine {
     this._isPlaying = false;
     this._stopAudioKeepAlive();
     this._releaseWakeLock();
+    const nativeMS = this._getNativeMediaSession();
+    if (nativeMS) {
+      nativeMS.setPlaybackState({ playbackState: 'none' }).catch(() => {});
+    }
     this._notify('playState', { isPlaying: false, track: this.currentTrack });
   }
 
