@@ -915,7 +915,9 @@ textarea,
 .svx-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 4, 10, 0.94);
+  background: rgba(6, 6, 12, 0.98);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
   z-index: 200;
   opacity: 0;
   pointer-events: none;
@@ -1034,7 +1036,7 @@ textarea,
   font-family: var(--svx-font-primary);
   font-size: 15px;
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
 }
 
 .svx-composer-textarea::placeholder {
@@ -1053,9 +1055,9 @@ textarea,
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(138, 43, 226, 0.16);
-  border: 1px solid rgba(138, 43, 226, 0.35);
-  color: var(--svx-accent-cyan);
+  background: rgba(138, 43, 226, 0.22);
+  border: 1px solid rgba(138, 43, 226, 0.45);
+  color: #ffffff;
   padding: 6px 14px;
   border-radius: var(--svx-glass-radius-pill);
   font-family: var(--svx-font-primary);
@@ -1066,15 +1068,119 @@ textarea,
   outline: none;
 }
 
+.svx-btn-autoformat .svx-icon {
+  stroke: #c084fc;
+  filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.6));
+}
+
 .svx-btn-autoformat:hover {
-  background: rgba(138, 43, 226, 0.25);
-  border-color: rgba(0, 210, 255, 0.4);
-  box-shadow: 0 0 12px rgba(138, 43, 226, 0.3);
+  background: rgba(138, 43, 226, 0.35);
+  border-color: rgba(168, 85, 247, 0.65);
+  box-shadow: 0 0 14px rgba(138, 43, 226, 0.4);
+  color: #ffffff;
 }
 
 .svx-btn-autoformat:active {
   transform: scale(0.95);
-  background: rgba(138, 43, 226, 0.35);
+  background: rgba(138, 43, 226, 0.45);
+}
+
+.svx-btn-attach-music {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 210, 255, 0.12);
+  border: 1px solid rgba(0, 210, 255, 0.38);
+  color: #38bdf8;
+  padding: 6px 14px;
+  border-radius: var(--svx-glass-radius-pill);
+  font-family: var(--svx-font-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.svx-btn-attach-music .svx-icon {
+  stroke: #00d2ff;
+  filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.6));
+}
+
+.svx-btn-attach-music:hover {
+  background: rgba(0, 210, 255, 0.22);
+  border-color: rgba(0, 210, 255, 0.6);
+  box-shadow: 0 0 14px rgba(0, 210, 255, 0.4);
+  color: #ffffff;
+}
+
+.svx-btn-attach-music:active {
+  transform: scale(0.95);
+  background: rgba(0, 210, 255, 0.32);
+}
+
+/* Interactive Composer Preview Audio Pill */
+#svx-composer-audio-pill {
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+
+#svx-composer-audio-pill:hover {
+  border-color: rgba(0, 210, 255, 0.4);
+  background: rgba(26, 26, 46, 0.96);
+}
+
+#svx-composer-audio-pill:active {
+  transform: scale(0.985);
+}
+
+.svx-composer-audio-remove-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--svx-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 6px;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.svx-composer-audio-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #ef4444;
+  transform: scale(1.08);
+}
+
+.svx-composer-audio-remove-btn:active {
+  transform: scale(0.9);
+}
+
+.svx-no-audio-wrap {
+  background: rgba(18, 18, 28, 0.7);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: var(--svx-glass-radius-pill);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 10px;
+}
+
+.svx-no-audio-text {
+  font-size: 11.5px;
+  color: var(--svx-text-muted);
+  font-style: italic;
 }
 
 .svx-composer-meta-stats {

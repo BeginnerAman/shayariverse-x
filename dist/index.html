@@ -295,7 +295,7 @@
         <div class="svx-preview-section">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
             <span class="svx-selector-title" style="margin-bottom: 0;">Live Card Preview</span>
-            <button id="svx-composer-change-bgm-btn" class="svx-btn-autoformat" type="button" aria-label="Change Background Music">
+            <button id="svx-composer-change-bgm-btn" class="svx-btn-attach-music" type="button" aria-label="Change Background Music">
               <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
               <span>Attach Music</span>
             </button>
@@ -326,8 +326,8 @@
                 <div class="svx-quote-mark svx-quote-close">&rdquo;</div>
               </div>
 
-              <!-- Audio Pill Preview -->
-              <div id="svx-composer-audio-pill" class="svx-audio-pill">
+              <!-- Audio Pill Preview (Tap to Play/Pause, X to Remove) -->
+              <div id="svx-composer-audio-pill" class="svx-audio-pill" data-song-url="" title="Tap to preview BGM">
                 <div class="svx-album-art" aria-hidden="true">
                   <svg class="svx-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></svg>
                 </div>
@@ -342,6 +342,18 @@
                   <div class="svx-eq-bar"></div>
                   <div class="svx-eq-bar"></div>
                 </div>
+                <button id="svx-composer-remove-bgm-btn" class="svx-composer-audio-remove-btn" type="button" title="Remove BGM" aria-label="Remove background music">
+                  <svg class="svx-icon" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: currentColor;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              <!-- No Audio Placeholder (Appears when music is detached) -->
+              <div id="svx-composer-no-audio-wrap" class="svx-no-audio-wrap" style="display: none;">
+                <span class="svx-no-audio-text">No BGM attached (Pure Shayari)</span>
+                <button id="svx-composer-add-bgm-btn" class="svx-btn-attach-music" type="button" style="padding: 4px 10px; font-size: 11px;">
+                  <svg class="svx-icon svx-icon-xs" viewBox="0 0 24 24" style="width: 12px; height: 12px;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                  <span>+ Add BGM</span>
+                </button>
               </div>
             </article>
           </div>

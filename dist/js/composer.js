@@ -4,6 +4,7 @@
 import { CONFIG } from './config.js';
 import { db } from './db.js';
 import { renderIcon } from './ui.js';
+import { audioEngine } from './audio-engine.js';
 
 /**
  * 1. Auto-Format Couplet Engine
@@ -112,6 +113,9 @@ export class SVXComposerModal {
     this.previewSongTitle = document.getElementById('svx-composer-song-title');
     this.previewSongArtist = document.getElementById('svx-composer-song-artist');
     this.previewAudioPill = document.getElementById('svx-composer-audio-pill');
+    this.removeBgmBtn = document.getElementById('svx-composer-remove-bgm-btn');
+    this.noAudioWrap = document.getElementById('svx-composer-no-audio-wrap');
+    this.addBgmBtn = document.getElementById('svx-composer-add-bgm-btn');
     this.charCountEl = document.getElementById('svx-composer-char-count');
     this.autoFitBadge = document.getElementById('svx-composer-autofit-badge');
     this.autoFormatBtn = document.getElementById('svx-composer-autoformat-btn');
@@ -123,14 +127,52 @@ export class SVXComposerModal {
     // State
     this.selectedMood = 'purple';
     this.selectedFont = 'nastaliq';
-    this.attachedSong = {
-      name: "Tum Hi Ho (Slowed + Reverb)",
-      artist: "Arijit Singh",
-      url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/slowed-reverb-tum-hi-ho.mp3",
-      source: "cdn"
-    };
+    this.attachedSong = this.getRandomTrack();
+    if (this.previewAudioPill && this.attachedSong?.url) {
+      this.previewAudioPill.setAttribute('data-song-url', this.attachedSong.url);
+    }
 
     this.initEvents();
+  }
+
+  getRandomTrack() {
+    if (audioEngine.playlist && audioEngine.playlist.length > 0) {
+      const idx = Math.floor(Math.random() * audioEngine.playlist.length);
+      return audioEngine.playlist[idx];
+    }
+    const fallbackTracks = [
+      {
+        name: "Tum Hi Ho (Slowed + Reverb)",
+        artist: "Arijit Singh",
+        url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/slowed-reverb-tum-hi-ho.mp3",
+        source: "cdn"
+      },
+      {
+        name: "Dil Ka Aalam",
+        artist: "Kumar Sanu (Aashiqui)",
+        url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/tracks/dil-ka-aalam.mp3",
+        source: "cdn"
+      },
+      {
+        name: "Pehla Nasha (Acoustic Guitar)",
+        artist: "Udit Narayan & Sadhana Sargam",
+        url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/tracks/pehla-nasha.mp3",
+        source: "cdn"
+      },
+      {
+        name: "Jeena Jeena (Flute & Piano)",
+        artist: "Atif Aslam (Badlapur)",
+        url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/tracks/jeena-jeena.mp3",
+        source: "cdn"
+      },
+      {
+        name: "Kesariya (Lofi Chill)",
+        artist: "Pritam & Arijit Singh",
+        url: "https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/bgm/kesariya-lofi.mp3",
+        source: "cdn"
+      }
+    ];
+    return fallbackTracks[Math.floor(Math.random() * fallbackTracks.length)];
   }
 
   initEvents() {
@@ -141,6 +183,31 @@ export class SVXComposerModal {
 
     // Change BGM button
     this.changeBgmBtn?.addEventListener('click', () => {
+      this.close();
+      if (this.onOpenMusicPicker) {
+        this.onOpenMusicPicker();
+      }
+    });
+
+    // Tap on preview audio pill to Play / Pause preview song
+    this.previewAudioPill?.addEventListener('click', (e) => {
+      if (e.target.closest('#svx-composer-remove-bgm-btn')) return;
+      if (this.attachedSong && this.attachedSong.url) {
+        audioEngine.togglePlayPause(this.attachedSong.url, this.attachedSong);
+      }
+    });
+
+    // Remove BGM button
+    this.removeBgmBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (audioEngine.isPlaying && this.attachedSong && audioEngine.currentTrack?.url === this.attachedSong.url) {
+        audioEngine.pause();
+      }
+      this.setAttachedSong(null);
+    });
+
+    // Re-add BGM button inside placeholder
+    this.addBgmBtn?.addEventListener('click', () => {
       this.close();
       if (this.onOpenMusicPicker) {
         this.onOpenMusicPicker();
@@ -193,6 +260,10 @@ export class SVXComposerModal {
     if (!this.modal) return;
     this.modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+    // If opening for a fresh post and no song attached yet, pick a random track from catalog
+    if (!this.editingShayariId && (!this.attachedSong || !this.attachedSong.url)) {
+      this.setAttachedSong(this.getRandomTrack());
+    }
     this.textarea?.focus();
     this.updateLivePreview();
   }
@@ -210,6 +281,8 @@ export class SVXComposerModal {
         art: shayari.song_art,
         source: shayari.song_source
       });
+    } else {
+      this.setAttachedSong(null);
     }
     const submitText = this.submitBtn?.querySelector('span');
     if (submitText) submitText.textContent = 'Update';
@@ -220,6 +293,10 @@ export class SVXComposerModal {
     if (!this.modal) return;
     this.modal.classList.remove('active');
     document.body.style.overflow = '';
+    // Pause audio preview if it was playing
+    if (audioEngine.isPlaying && this.attachedSong && audioEngine.currentTrack?.url === this.attachedSong.url) {
+      audioEngine.pause();
+    }
     this.editingShayariId = null;
     const submitText = this.submitBtn?.querySelector('span');
     if (submitText) submitText.textContent = 'Post';
@@ -251,11 +328,26 @@ export class SVXComposerModal {
   }
 
   setAttachedSong(song) {
-    this.attachedSong = song;
-    if (this.previewSongTitle) this.previewSongTitle.textContent = song.name;
-    if (this.previewSongArtist) this.previewSongArtist.textContent = song.artist;
+    this.attachedSong = (song && song.url) ? song : null;
+    if (!this.attachedSong) {
+      if (this.previewAudioPill) {
+        this.previewAudioPill.style.display = 'none';
+        this.previewAudioPill.removeAttribute('data-song-url');
+      }
+      if (this.noAudioWrap) {
+        this.noAudioWrap.style.display = 'flex';
+      }
+      return;
+    }
+
+    if (this.noAudioWrap) {
+      this.noAudioWrap.style.display = 'none';
+    }
+    if (this.previewSongTitle) this.previewSongTitle.textContent = this.attachedSong.name;
+    if (this.previewSongArtist) this.previewSongArtist.textContent = this.attachedSong.artist;
     if (this.previewAudioPill) {
-      this.previewAudioPill.style.display = song.url ? 'flex' : 'none';
+      this.previewAudioPill.style.display = 'flex';
+      this.previewAudioPill.setAttribute('data-song-url', this.attachedSong.url);
     }
   }
 
