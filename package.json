@@ -1,6 +1,6 @@
 {
   "name": "shayariverse-x",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "ShayariVerse X — Dark Liquid Glassmorphism Social Shayari & Music Application",
   "type": "module",
   "main": "js/ui.js",
@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@capacitor/app": "^6.0.0",
-    "@supabase/supabase-js": "^2.45.0"
+    "@supabase/supabase-js": "^2.45.0",
+    "capacitor-music-controls-plugin": "^6.1.0"
   }
 }

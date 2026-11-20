@@ -22,6 +22,7 @@ class AudioEngine {
     this._curatedCache = null;
     this._fadeTimer = null;
     this._mediaSessionWired = false;
+    this._nativeControlsWired = false;
 
     // Background playback preference (persisted in localStorage, defaults to true)
     let storedBg = null;
@@ -48,6 +49,7 @@ class AudioEngine {
     this.audio.addEventListener('play', () => {
       this._isPlaying = true;
       this._updateMediaSession(this.currentTrack);
+      this._updateNativeMusicControls(this.currentTrack, true);
       this._notify('playState', { isPlaying: true, track: this.currentTrack });
     });
 
@@ -56,11 +58,13 @@ class AudioEngine {
       if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
+      this._updateNativePlayState(false);
       this._notify('playState', { isPlaying: false, track: this.currentTrack });
     });
 
     this.audio.addEventListener('ended', () => {
       this._isPlaying = false;
+      this._updateNativePlayState(false);
       this._notify('playState', { isPlaying: false, track: this.currentTrack });
 
       if (this.playbackMode === 'sequential' || this.playbackMode === 'shuffle') {
@@ -149,6 +153,131 @@ class AudioEngine {
       navigator.mediaSession.playbackState = this._isPlaying ? 'playing' : 'paused';
     } catch (e) {
       console.warn('[SVX Audio] MediaSession update error:', e);
+    }
+  }
+
+  _getNativeMusicControls() {
+    if (typeof window === 'undefined') return null;
+    return window.Capacitor?.Plugins?.CapacitorMusicControls || null;
+  }
+
+  async _requestNotificationPermission() {
+    try {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default' && typeof Notification.requestPermission === 'function') {
+        await Notification.requestPermission();
+      }
+    } catch {}
+  }
+
+  async _updateNativeMusicControls(track, isPlaying = true) {
+    if (!track) return;
+    const controls = this._getNativeMusicControls();
+    if (!controls) return;
+
+    // Request notification permission if needed on Android 13+
+    this._requestNotificationPermission();
+
+    if (!this._nativeControlsWired) {
+      this._nativeControlsWired = true;
+
+      const handleAction = (action) => {
+        if (!action) return;
+        switch (action) {
+          case 'music-controls-play':
+            if (this.currentTrack) {
+              this.audio.play().catch(() => {});
+            }
+            break;
+          case 'music-controls-pause':
+            this.pause(true);
+            break;
+          case 'music-controls-toggle-play-pause':
+            if (this._isPlaying) {
+              this.pause(true);
+            } else if (this.currentTrack) {
+              this.audio.play().catch(() => {});
+            }
+            break;
+          case 'music-controls-next':
+            this.playNext();
+            break;
+          case 'music-controls-previous':
+            this.playPrevious();
+            break;
+          case 'music-controls-destroy':
+            this.pause(true);
+            this._destroyNativeMusicControls();
+            break;
+          case 'music-controls-headset-unplugged':
+            this.pause(true);
+            break;
+        }
+      };
+
+      // 1. Android listener via document custom event (Android 13+ support)
+      if (typeof document !== 'undefined') {
+        document.addEventListener('controlsNotification', (event) => {
+          let action = event?.message;
+          if (!action && event?.detail) {
+            action = typeof event.detail === 'string'
+              ? (JSON.parse(event.detail || '{}').message)
+              : event.detail.message;
+          }
+          handleAction(action);
+        });
+      }
+
+      // 2. Capacitor native plugin listener (iOS / standard bridge)
+      if (typeof controls.addListener === 'function') {
+        try {
+          controls.addListener('controlsNotification', (info) => {
+            const action = info?.message;
+            handleAction(action);
+          });
+        } catch (e) {
+          console.warn('[SVX Audio] Native controls listener error:', e);
+        }
+      }
+    }
+
+    try {
+      const artUrl = track.art || 'https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/assets/icon.svg';
+      await controls.create({
+        track: track.name || 'Shayari BGM',
+        artist: track.artist || 'ShayariVerse X',
+        album: 'ShayariVerse X Poetic Beats',
+        cover: artUrl,
+        isPlaying: !!isPlaying,
+        dismissable: true,
+        hasPrev: true,
+        hasNext: true,
+        hasClose: true,
+        ticker: `Now playing "${track.name || 'Shayari BGM'}"`
+      });
+    } catch (err) {
+      console.warn('[SVX Audio] Native music controls create error:', err);
+    }
+  }
+
+  _updateNativePlayState(isPlaying) {
+    const controls = this._getNativeMusicControls();
+    if (controls && typeof controls.updateIsPlaying === 'function') {
+      try {
+        controls.updateIsPlaying({ isPlaying: !!isPlaying });
+      } catch (err) {
+        console.warn('[SVX Audio] Native music controls updateIsPlaying error:', err);
+      }
+    }
+  }
+
+  _destroyNativeMusicControls() {
+    const controls = this._getNativeMusicControls();
+    if (controls && typeof controls.destroy === 'function') {
+      try {
+        controls.destroy();
+      } catch (err) {
+        console.warn('[SVX Audio] Native music controls destroy error:', err);
+      }
     }
   }
 
@@ -413,6 +542,17 @@ class AudioEngine {
       return;
     }
     this.fadeOut();
+  }
+
+  stop() {
+    clearInterval(this._fadeTimer);
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.currentTime = 0;
+    }
+    this._isPlaying = false;
+    this._destroyNativeMusicControls();
+    this._notify('playState', { isPlaying: false, track: this.currentTrack });
   }
 
   async togglePlayPause(url, metadata = {}) {
