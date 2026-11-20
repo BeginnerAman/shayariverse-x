@@ -604,6 +604,26 @@
           "mood": "calm",
           "art": null,
           "source": "cdn"
+        },
+        {
+          "id": "svx-suk-041",
+          "name": "Guzarish (Soulful Edit)",
+          "artist": "Satinder Sartaaj",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/guzarish-satinder-sartaaj.mp3",
+          "duration": 37,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-suk-042",
+          "name": "Rabba Lakh Lakh Shukar Manaawa",
+          "artist": "Nusrat Fateh Ali Khan",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/rabba-lakh-lakh-shukar-manaawa-nfak.mp3",
+          "duration": 15,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
         }
       ]
     },
@@ -1288,6 +1308,16 @@
           "artist": "Emotional BGM",
           "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/tujhe-pyaar-kiya-toh-slowed.mp3",
           "duration": 23,
+          "mood": "sad",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-dar-069",
+          "name": "Mud Ke Dobara Aande Na (Barsaat)",
+          "artist": "Barsaat Lo-Fi",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/mud-ke-dobara-aande-na-barsaat.mp3",
+          "duration": 30,
           "mood": "sad",
           "art": null,
           "source": "cdn"
@@ -2358,6 +2388,26 @@
           "mood": "romantic",
           "art": null,
           "source": "cdn"
+        },
+        {
+          "id": "svx-rom-107",
+          "name": "Pyaar Vi Ni Karda (Acoustic)",
+          "artist": "Romantic Couplet",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/enna-ke-ta-sohniya-pyaar.mp3",
+          "duration": 14,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-rom-108",
+          "name": "Sajne Sawarne Ki Zaroorat",
+          "artist": "Romantic Melodies",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/sajne-sawarne-ki-zaroorat-diamond.mp3",
+          "duration": 13,
+          "mood": "romantic",
+          "art": null,
+          "source": "cdn"
         }
       ]
     },
@@ -2652,6 +2702,16 @@
           "artist": "Classic Melodies",
           "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/they-dont-make-songs-like-this.mp3",
           "duration": 36,
+          "mood": "calm",
+          "art": null,
+          "source": "cdn"
+        },
+        {
+          "id": "svx-aes-030",
+          "name": "Alfaaz (Aesthetic)",
+          "artist": "Hamza Malik & Zain Zohaib",
+          "url": "https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/bgm/tracks/alfaaz-hamza-malik-zain-zohaib.mp3",
+          "duration": 21,
           "mood": "calm",
           "art": null,
           "source": "cdn"

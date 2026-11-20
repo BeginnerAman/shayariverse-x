@@ -148,7 +148,10 @@ class AudioEngine {
     return this.playlist;
   }
 
-  playNext() {
+  async playNext() {
+    if (!this.playlist || this.playlist.length === 0) {
+      await this.loadCuratedBGM();
+    }
     if (!this.playlist || this.playlist.length === 0) return;
 
     let nextIndex;
@@ -171,7 +174,10 @@ class AudioEngine {
     }
   }
 
-  playPrevious() {
+  async playPrevious() {
+    if (!this.playlist || this.playlist.length === 0) {
+      await this.loadCuratedBGM();
+    }
     if (!this.playlist || this.playlist.length === 0) return;
 
     let prevIndex;
