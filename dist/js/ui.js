@@ -629,6 +629,10 @@ export class SVXMusicController {
     this.miniPlayBtn = document.getElementById('svx-mini-player-play-btn');
     this.miniNextBtn = document.getElementById('svx-mini-player-next-btn');
     this.miniCloseBtn = document.getElementById('svx-mini-player-close-btn');
+    this.miniSettingsBtn = document.getElementById('svx-mini-player-settings-btn');
+    this.miniTrackArea = document.getElementById('svx-mini-player-track-area');
+    this.miniBgPopup = document.getElementById('svx-mini-player-bg-popup');
+    this.miniBgToggle = document.getElementById('svx-bg-audio-toggle');
 
     this.init();
   }
@@ -749,8 +753,86 @@ export class SVXMusicController {
       }
     });
 
+    // --- Background Playback Quick Settings Glass Popup ---
+    const toggleBgPopup = (forceState) => {
+      if (!this.miniBgPopup) return;
+      const isOpen = this.miniBgPopup.style.display !== 'none';
+      const next = typeof forceState === 'boolean' ? forceState : !isOpen;
+      this.miniBgPopup.style.display = next ? 'flex' : 'none';
+    };
+
+    if (this.miniBgToggle) {
+      this.miniBgToggle.checked = audioEngine.isBackgroundPlaybackEnabled();
+      this.miniBgToggle.addEventListener('change', () => {
+        const enabled = this.miniBgToggle.checked;
+        audioEngine.setBackgroundPlayback(enabled);
+        showToast(enabled ? "Background Playback ON" : "Background Playback OFF", "Music");
+      });
+    }
+
+    // Direct Settings icon tap
+    this.miniSettingsBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBgPopup();
+    });
+
+    // Long-Press gesture on track area (~500ms)
+    let longPressTimer = null;
+    let didLongPress = false;
+
+    const startPress = () => {
+      didLongPress = false;
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(() => {
+        didLongPress = true;
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(30); } catch {}
+        }
+        toggleBgPopup(true);
+      }, 500);
+    };
+
+    const cancelPress = () => {
+      clearTimeout(longPressTimer);
+    };
+
+    if (this.miniTrackArea) {
+      this.miniTrackArea.addEventListener('pointerdown', startPress);
+      this.miniTrackArea.addEventListener('pointerup', cancelPress);
+      this.miniTrackArea.addEventListener('pointerleave', cancelPress);
+      this.miniTrackArea.addEventListener('pointercancel', cancelPress);
+
+      // Normal click triggers play/pause if it wasn't a long-press
+      this.miniTrackArea.addEventListener('click', (e) => {
+        if (didLongPress) {
+          e.stopPropagation();
+          didLongPress = false;
+          return;
+        }
+        const current = audioEngine.getCurrentTrack();
+        if (current) {
+          audioEngine.togglePlayPause(current.url, current);
+        }
+      });
+    }
+
+    // Outside click dismisses the popup
+    document.addEventListener('pointerdown', (e) => {
+      if (this.miniBgPopup && this.miniBgPopup.style.display !== 'none') {
+        if (!this.miniBgPopup.contains(e.target) && !this.miniSettingsBtn?.contains(e.target)) {
+          this.miniBgPopup.style.display = 'none';
+        }
+      }
+    });
+
     audioEngine.onModeChange(({ mode }) => {
       this.updateMiniPlayerModeUI(mode);
+    });
+
+    audioEngine.onBackgroundPlaybackChange(({ enabled }) => {
+      if (this.miniBgToggle) {
+        this.miniBgToggle.checked = enabled;
+      }
     });
 
     this.updateMiniPlayerModeUI(audioEngine.getPlaybackMode());

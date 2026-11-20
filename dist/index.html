@@ -130,9 +130,27 @@
           <!-- Populated dynamically via live search -->
         </div>
 
-        <!-- Floating Discover Mini Music Bar (Sequential, Shuffle, Loop) -->
+        <!-- Floating Discover Mini Music Bar (Sequential, Shuffle, Loop & Background Playback) -->
         <div id="svx-discover-mini-player" class="svx-discover-mini-player" style="display: none;" role="region" aria-label="Music Player Controls">
-          <div class="svx-mini-player-track">
+          
+          <!-- Background Audio Quick Settings Glass Popup (Triggered via Long-Press or Settings icon) -->
+          <div id="svx-mini-player-bg-popup" class="svx-bg-popup" style="display: none;" role="dialog" aria-label="Background Playback Settings">
+            <div class="svx-bg-popup-header">
+              <div class="svx-bg-popup-title-wrap">
+                <svg class="svx-icon svx-icon-xs" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+                <span class="svx-bg-popup-title">Background Music</span>
+              </div>
+              <label class="svx-switch" aria-label="Toggle Background Music">
+                <input id="svx-bg-audio-toggle" type="checkbox" checked>
+                <span class="svx-slider"></span>
+              </label>
+            </div>
+            <div class="svx-bg-popup-desc">
+              Play music when app is minimized or screen is locked
+            </div>
+          </div>
+
+          <div id="svx-mini-player-track-area" class="svx-mini-player-track" title="Hold for background audio settings">
             <div id="svx-mini-player-art" class="svx-mini-player-art" aria-hidden="true">
               <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></svg>
             </div>
@@ -143,6 +161,11 @@
           </div>
 
           <div class="svx-mini-player-controls">
+            <!-- Background Audio Settings Shortcut -->
+            <button id="svx-mini-player-settings-btn" class="svx-mini-btn" type="button" aria-label="Background Audio Settings" title="Background Audio Settings">
+              <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+            </button>
+
             <!-- Mode Toggle Button (Loop, Sequential, Shuffle) -->
             <button id="svx-mini-player-mode-btn" class="svx-mini-btn" type="button" aria-label="Playback Mode" title="Playback Mode">
               <svg id="svx-mini-player-mode-icon" class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>

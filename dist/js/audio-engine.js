@@ -21,11 +21,21 @@ class AudioEngine {
     this._isPlaying = false;
     this._curatedCache = null;
     this._fadeTimer = null;
+    this._mediaSessionWired = false;
+
+    // Background playback preference (persisted in localStorage, defaults to true)
+    let storedBg = null;
+    try {
+      storedBg = typeof localStorage !== 'undefined' ? localStorage.getItem('svx_bg_playback') : null;
+    } catch {}
+    this.backgroundPlaybackEnabled = storedBg === null ? true : storedBg === 'true';
+
     this.listeners = {
       playState: new Set(),
       trackChange: new Set(),
       timeUpdate: new Set(),
       modeChange: new Set(),
+      bgPlaybackChange: new Set(),
       error: new Set()
     };
 
@@ -37,11 +47,15 @@ class AudioEngine {
     if (!this.audio.addEventListener) return;
     this.audio.addEventListener('play', () => {
       this._isPlaying = true;
+      this._updateMediaSession(this.currentTrack);
       this._notify('playState', { isPlaying: true, track: this.currentTrack });
     });
 
     this.audio.addEventListener('pause', () => {
       this._isPlaying = false;
+      if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
       this._notify('playState', { isPlaying: false, track: this.currentTrack });
     });
 
@@ -61,6 +75,17 @@ class AudioEngine {
           duration: this.audio.duration,
           progress: (this.audio.currentTime / this.audio.duration) * 100
         });
+
+        // Update Android lock screen notification progress bar if supported
+        if (typeof navigator !== 'undefined' && 'mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: this.audio.duration || 0,
+              playbackRate: this.audio.playbackRate || 1,
+              position: this.audio.currentTime || 0
+            });
+          } catch {}
+        }
       }
     });
 
@@ -73,14 +98,57 @@ class AudioEngine {
   }
 
   _bindVisibilityEvents() {
-    // Battery & Performance rule: Pause audio immediately when tab/app is minimized
+    // Background Playback / Battery rule
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
         if (document.hidden && this._isPlaying) {
-          console.log('[SVX Audio] App backgrounded, auto-pausing audio to conserve battery');
-          this.pause(true);
+          if (!this.backgroundPlaybackEnabled) {
+            console.log('[SVX Audio] App backgrounded, auto-pausing audio (Background Playback is OFF)');
+            this.pause(true);
+          } else {
+            console.log('[SVX Audio] App backgrounded, continuing audio playback in background (Background Playback is ON)');
+          }
         }
       });
+    }
+  }
+
+  _updateMediaSession(track) {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator) || !track) return;
+    try {
+      const artUrl = track.art || 'https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/assets/icon.svg';
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.name || 'Shayari BGM',
+        artist: track.artist || 'ShayariVerse X',
+        album: 'ShayariVerse X Poetic Beats',
+        artwork: [
+          { src: artUrl, sizes: '96x96', type: 'image/svg+xml' },
+          { src: artUrl, sizes: '192x192', type: 'image/svg+xml' },
+          { src: artUrl, sizes: '512x512', type: 'image/svg+xml' }
+        ]
+      });
+
+      if (!this._mediaSessionWired) {
+        this._mediaSessionWired = true;
+        navigator.mediaSession.setActionHandler('play', () => {
+          if (this.currentTrack) {
+            this.audio.play().catch(() => {});
+          }
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          this.pause(true);
+        });
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          this.playNext();
+        });
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          this.playPrevious();
+        });
+      }
+
+      navigator.mediaSession.playbackState = this._isPlaying ? 'playing' : 'paused';
+    } catch (e) {
+      console.warn('[SVX Audio] MediaSession update error:', e);
     }
   }
 
@@ -121,6 +189,25 @@ class AudioEngine {
   onModeChange(callback) {
     this.listeners.modeChange.add(callback);
     return () => this.listeners.modeChange.delete(callback);
+  }
+
+  onBackgroundPlaybackChange(callback) {
+    this.listeners.bgPlaybackChange.add(callback);
+    return () => this.listeners.bgPlaybackChange.delete(callback);
+  }
+
+  setBackgroundPlayback(enabled) {
+    this.backgroundPlaybackEnabled = !!enabled;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('svx_bg_playback', this.backgroundPlaybackEnabled ? 'true' : 'false');
+      }
+    } catch {}
+    this._notify('bgPlaybackChange', { enabled: this.backgroundPlaybackEnabled });
+  }
+
+  isBackgroundPlaybackEnabled() {
+    return this.backgroundPlaybackEnabled;
   }
 
   setPlaybackMode(mode) {
