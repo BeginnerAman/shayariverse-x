@@ -18,6 +18,20 @@ if (fs.existsSync(pkgPath) && fs.existsSync(gradlePath)) {
   
   fs.writeFileSync(gradlePath, content, 'utf8');
   console.log(`[SVX Version] Successfully updated android/app/build.gradle to versionCode ${versionCode}, versionName "${pkg.version}"`);
+
+  // Inject WAKE_LOCK permission so Android OS PowerManager does not kill background audio after 5 minutes
+  const manifestPath = path.join(ROOT_DIR, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+  if (fs.existsSync(manifestPath)) {
+    let manifest = fs.readFileSync(manifestPath, 'utf8');
+    if (!manifest.includes('android.permission.WAKE_LOCK')) {
+      manifest = manifest.replace(
+        '<application',
+        '    <uses-permission android:name="android.permission.WAKE_LOCK" />\n    <application'
+      );
+      fs.writeFileSync(manifestPath, manifest, 'utf8');
+      console.log('[SVX Version] Injected WAKE_LOCK permission to AndroidManifest.xml');
+    }
+  }
 } else {
   console.log('[SVX Version] Notice: android/app/build.gradle not present locally; will run in CI pipeline.');
 }

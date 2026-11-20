@@ -22,6 +22,11 @@ class AudioEngine {
     this._curatedCache = null;
     this._fadeTimer = null;
     this._mediaSessionWired = false;
+    this._wakeLock = null;
+    this._audioCtx = null;
+    this._keepAliveGain = null;
+    this._keepAliveOsc = null;
+    this._keepAliveActive = false;
 
     // Background playback preference (persisted in localStorage, defaults to true)
     let storedBg = null;
@@ -47,12 +52,16 @@ class AudioEngine {
     if (!this.audio.addEventListener) return;
     this.audio.addEventListener('play', () => {
       this._isPlaying = true;
+      this._startAudioKeepAlive();
+      this._acquireWakeLock();
       this._updateMediaSession(this.currentTrack);
       this._notify('playState', { isPlaying: true, track: this.currentTrack });
     });
 
     this.audio.addEventListener('pause', () => {
       this._isPlaying = false;
+      this._stopAudioKeepAlive();
+      this._releaseWakeLock();
       if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
@@ -65,6 +74,9 @@ class AudioEngine {
 
       if (this.playbackMode === 'sequential' || this.playbackMode === 'shuffle') {
         this.playNext();
+      } else {
+        this._stopAudioKeepAlive();
+        this._releaseWakeLock();
       }
     });
 
@@ -92,6 +104,8 @@ class AudioEngine {
     this.audio.addEventListener('error', (e) => {
       console.warn('[SVX Audio] Playback error or network failure:', e);
       this._isPlaying = false;
+      this._stopAudioKeepAlive();
+      this._releaseWakeLock();
       this._notify('playState', { isPlaying: false, track: this.currentTrack });
       this._notify('error', e);
     });
@@ -101,16 +115,91 @@ class AudioEngine {
     // Background Playback / Battery rule
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
-        if (document.hidden && this._isPlaying) {
-          if (!this.backgroundPlaybackEnabled) {
-            console.log('[SVX Audio] App backgrounded, auto-pausing audio (Background Playback is OFF)');
-            this.pause(true);
-          } else {
-            console.log('[SVX Audio] App backgrounded, continuing audio playback in background (Background Playback is ON)');
+        if (document.hidden) {
+          if (this._isPlaying) {
+            if (!this.backgroundPlaybackEnabled) {
+              console.log('[SVX Audio] App backgrounded, auto-pausing audio (Background Playback is OFF)');
+              this.pause(true);
+            } else {
+              console.log('[SVX Audio] App backgrounded, maintaining persistent background playback stream...');
+              this._startAudioKeepAlive();
+              this._acquireWakeLock();
+            }
+          }
+        } else {
+          // When returning to foreground: verify playback continuity
+          if (this._isPlaying && this.audio && this.audio.paused && this.backgroundPlaybackEnabled) {
+            console.log('[SVX Audio] Restoring audio continuity on foreground return...');
+            this.audio.play().catch(() => {});
           }
         }
       });
     }
+  }
+
+  async _acquireWakeLock() {
+    if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+      try {
+        if (!this._wakeLock) {
+          this._wakeLock = await navigator.wakeLock.request('screen');
+          this._wakeLock.addEventListener('release', () => {
+            this._wakeLock = null;
+          });
+        }
+      } catch {}
+    }
+  }
+
+  _releaseWakeLock() {
+    if (this._wakeLock) {
+      try {
+        this._wakeLock.release();
+      } catch {}
+      this._wakeLock = null;
+    }
+  }
+
+  _startAudioKeepAlive() {
+    if (this._keepAliveActive || !this.backgroundPlaybackEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      if (!this._audioCtx) {
+        this._audioCtx = new AudioCtx();
+      }
+
+      if (this._audioCtx.state === 'suspended') {
+        this._audioCtx.resume().catch(() => {});
+      }
+
+      // Attach continuous low-frequency hardware stream to prevent Android AudioFlinger sleep
+      if (!this._keepAliveGain) {
+        const osc = this._audioCtx.createOscillator();
+        const gain = this._audioCtx.createGain();
+        gain.gain.value = 0.00001; // Inaudible to human ear, but keeps hardware clock cycling
+        osc.frequency.value = 40;
+        osc.connect(gain);
+        gain.connect(this._audioCtx.destination);
+        osc.start();
+        this._keepAliveGain = gain;
+        this._keepAliveOsc = osc;
+      }
+
+      this._keepAliveActive = true;
+    } catch (err) {
+      console.warn('[SVX Audio] Audio keep-alive error:', err);
+    }
+  }
+
+  _stopAudioKeepAlive() {
+    if (!this._keepAliveActive) return;
+    try {
+      if (this._audioCtx && this._audioCtx.state === 'running') {
+        this._audioCtx.suspend().catch(() => {});
+      }
+      this._keepAliveActive = false;
+    } catch {}
   }
 
   _updateMediaSession(track) {
@@ -420,6 +509,8 @@ class AudioEngine {
       this.audio.currentTime = 0;
     }
     this._isPlaying = false;
+    this._stopAudioKeepAlive();
+    this._releaseWakeLock();
     this._notify('playState', { isPlaying: false, track: this.currentTrack });
   }
 
