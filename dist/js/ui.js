@@ -2726,6 +2726,7 @@ export class SVXReelsController {
     this.hasLoaded = false;
     this.isLoading = false;
     this._audioPlayTimeout = null;
+    this.lastUserId = null;
 
     this.setupObserver();
   }
@@ -2773,11 +2774,60 @@ export class SVXReelsController {
       this.reels = this.shuffle(items);
       this.render();
       this.hasLoaded = true;
+      const currentUser = db.getCurrentUser();
+      this.lastUserId = (currentUser && currentUser.handle !== 'guest') ? currentUser.id : null;
     } catch (err) {
       console.error('[SVX Reels] Error loading stream:', err);
       this.renderError();
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  async syncUserLikes() {
+    const currentUser = db.getCurrentUser();
+    const currentUserId = (currentUser && currentUser.handle !== 'guest') ? currentUser.id : null;
+    this.lastUserId = currentUserId;
+
+    if (!this.hasLoaded || !this.reels || this.reels.length === 0) {
+      if (!this.isLoading && this.container.closest('.svx-view-section.active')) {
+        await this.loadReels();
+      }
+      return;
+    }
+
+    if (!currentUserId) {
+      // User is logged out / guest: clear like states across loaded reels
+      this.reels.forEach(s => {
+        s.has_liked = false;
+        syncLikeStateInDOM(s.id, false, s.likes_count || 0);
+      });
+      return;
+    }
+
+    try {
+      const shayariIds = this.reels.map(s => s.id).filter(Boolean);
+      if (shayariIds.length === 0) return;
+
+      let likedSet = new Set();
+      if (db.supabase && db.supabase._fetch) {
+        const idList = shayariIds.join(',');
+        const userLikes = await db.supabase._fetch(
+          `/likes?user_id=eq.${currentUserId}&shayari_id=in.(${idList})&select=shayari_id`
+        ).catch(() => []);
+        likedSet = new Set((userLikes || []).map(l => l.shayari_id));
+      } else if (db.local) {
+        const likes = JSON.parse(db.local.storage.getItem(db.local.kLikes) || '[]');
+        likes.filter(l => l.user_id === currentUserId).forEach(l => likedSet.add(l.shayari_id));
+      }
+
+      this.reels.forEach(s => {
+        const isLiked = likedSet.has(s.id);
+        s.has_liked = isLiked;
+        syncLikeStateInDOM(s.id, isLiked, s.likes_count || 0);
+      });
+    } catch (err) {
+      console.warn('[SVX Reels] Failed to sync user likes:', err);
     }
   }
 
@@ -3094,9 +3144,18 @@ export class SVXReelsController {
   }
 
   resume() {
+    const currentUser = db.getCurrentUser();
+    const currentUserId = (currentUser && currentUser.handle !== 'guest') ? currentUser.id : null;
+
     if (!this.hasLoaded) {
+      this.lastUserId = currentUserId;
       this.loadReels();
       return;
+    }
+
+    // Automatically synchronize liked states if user authentication changed while away
+    if (this.lastUserId !== currentUserId) {
+      this.syncUserLikes();
     }
 
     if (this.activeSlide && !this.isMuted) {
@@ -3464,11 +3523,18 @@ export function initBackNavigation({ authModal, commentModal, composerModal, edi
 export function initUI() {
   console.log(`[SVX] Initializing ${CONFIG.APP_NAME} (${CONFIG.APP_SHORT}) v${CONFIG.VERSION}`);
 
+  let feedController = null;
+  let profileController = null;
+  let reelsController = null;
+  let router = null;
+
   // Auto-repair any stale or non-UUID legacy sessions
   db.autoRepairSession?.().then(repaired => {
     if (repaired) {
       console.log('[SVX] Session validated with live cloud ID:', repaired.id);
       profileController?.render();
+      feedController?.loadFeed();
+      reelsController?.syncUserLikes();
     }
   }).catch(() => {});
 
@@ -3477,6 +3543,7 @@ export function initUI() {
     onAuthSuccess: () => {
       feedController?.loadFeed();
       profileController?.render();
+      reelsController?.syncUserLikes();
     }
   });
   globalAuthModal = authModal;
@@ -3506,8 +3573,6 @@ export function initUI() {
   const shareEngine = new SVXShareEngine();
 
   // 5. Initialize Composer Modal
-  let router = null;
-  let reelsController = null;
   const composerModal = new SVXComposerModal({
     onPostCreated: (newShayari, isUpdate) => {
       if (isUpdate) {
@@ -3529,8 +3594,7 @@ export function initUI() {
   });
 
   // 6. Initialize Profile Controller
-  let feedController = null;
-  const profileController = new SVXProfileController({
+  profileController = new SVXProfileController({
     editProfileModal,
     commentModal,
     shareEngine,
@@ -3541,6 +3605,7 @@ export function initUI() {
     },
     onFeedRefresh: () => {
       feedController?.loadFeed();
+      reelsController?.syncUserLikes();
     },
     onBackToFeed: () => {
       router?.switchView('feed');
