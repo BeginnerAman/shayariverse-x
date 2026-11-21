@@ -41,6 +41,24 @@ if (fs.existsSync(pkgPath)) {
     
     content = content.replace(/versionCode\s+\d+/, `versionCode ${versionCode}`);
     content = content.replace(/versionName\s+["'][^"']+["']/, `versionName "${pkg.version}"`);
+
+    // Ensure persistent signing config so every build maintains identical signature
+    const keystoreSrc = path.join(ROOT_DIR, 'scripts', 'debug.keystore');
+    const keystoreDest = path.join(ROOT_DIR, 'android', 'app', 'debug.keystore');
+    if (fs.existsSync(keystoreSrc)) {
+      try {
+        fs.copyFileSync(keystoreSrc, keystoreDest);
+        console.log('[SVX Version] Copied persistent debug.keystore into android/app/');
+      } catch (e) {
+        console.warn('[SVX Version] Could not copy keystore:', e.message);
+      }
+    }
+
+    if (!content.includes('signingConfigs') && content.includes('buildTypes {')) {
+      const signingBlock = `    signingConfigs {\n        debug {\n            storeFile file('debug.keystore')\n            storePassword 'android'\n            keyAlias 'androiddebugkey'\n            keyPassword 'android'\n        }\n    }\n`;
+      content = content.replace('buildTypes {', `${signingBlock}\n    buildTypes {\n        debug {\n            signingConfig signingConfigs.debug\n        }`);
+      console.log('[SVX Version] Injected persistent signingConfigs to android/app/build.gradle');
+    }
     
     fs.writeFileSync(gradlePath, content, 'utf8');
     console.log(`[SVX Version] Successfully updated android/app/build.gradle to versionCode ${versionCode}, versionName "${pkg.version}"`);
