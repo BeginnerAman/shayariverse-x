@@ -2735,6 +2735,94 @@ textarea,
   color: var(--svx-text-secondary);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Dark Liquid Glassmorphism Pull-To-Refresh Indicator                        */
+/* -------------------------------------------------------------------------- */
+.svx-pull-to-refresh {
+  position: fixed;
+  top: calc(var(--svx-top-bar-height) + env(safe-area-inset-top, 0px) + 10px);
+  left: 50%;
+  transform: translate(-50%, -85px) scale(0.9);
+  opacity: 0;
+  z-index: 99;
+  pointer-events: none;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+  will-change: transform, opacity;
+}
+
+.svx-pull-to-refresh.svx-ptr-dragging {
+  transition: none !important;
+}
+
+.svx-pull-to-refresh.svx-ptr-visible {
+  opacity: 1;
+}
+
+.svx-pull-to-refresh.svx-ptr-refreshing {
+  transform: translate(-50%, 0) scale(1) !important;
+  opacity: 1 !important;
+  pointer-events: auto;
+}
+
+.svx-ptr-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  background: rgba(13, 13, 22, 0.82);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(147, 51, 234, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 0 24px rgba(147, 51, 234, 0.25);
+  color: #f1f1f6;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.svx-ptr-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #c084fc;
+  transition: color 0.2s ease;
+}
+
+.svx-ptr-icon {
+  width: 17px;
+  height: 17px;
+  transition: transform 0.08s linear;
+}
+
+.svx-pull-to-refresh.svx-ptr-ready .svx-ptr-icon-wrap {
+  color: #a855f7;
+}
+
+.svx-pull-to-refresh.svx-ptr-ready .svx-ptr-text {
+  color: #e9d5ff;
+}
+
+.svx-pull-to-refresh.svx-ptr-refreshing .svx-ptr-icon {
+  animation: svx-spin 0.75s linear infinite;
+  color: #38bdf8;
+}
+
+.svx-pull-to-refresh.svx-ptr-refreshing .svx-ptr-text {
+  color: #7dd3fc;
+}
+
+.svx-pull-to-refresh.svx-ptr-success .svx-ptr-icon-wrap {
+  color: #34d399;
+}
+
+.svx-pull-to-refresh.svx-ptr-success .svx-ptr-text {
+  color: #a7f3d0;
+}
+
 /* Global Toast Notice */
 .svx-toast-container {
   position: fixed;

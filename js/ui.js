@@ -337,9 +337,205 @@ export class SVXFeedController {
     this.getRouter = getRouter;
     this.page = 1;
     this.loading = false;
+    this.isRefreshing = false;
     this.intersectionObserver = null;
     this.setupIntersectionObserver();
     this.setupAudioSync();
+    this.setupPullToRefresh();
+  }
+
+  setupPullToRefresh() {
+    const ptr = document.getElementById('svx-pull-to-refresh');
+    if (!ptr) return;
+
+    const icon = ptr.querySelector('.svx-ptr-icon');
+    const text = ptr.querySelector('.svx-ptr-text');
+
+    let startY = 0;
+    let startX = 0;
+    let isTracking = false;
+    let isPulling = false;
+    const PULL_THRESHOLD = 60; // Pixels required to trigger refresh
+
+    const resetPTR = () => {
+      isTracking = false;
+      isPulling = false;
+      ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready', 'svx-ptr-visible');
+      ptr.style.transform = '';
+      ptr.style.opacity = '';
+      if (icon) icon.style.transform = '';
+    };
+
+    window.addEventListener('touchstart', (e) => {
+      // Only track on Feed view
+      const feedView = document.getElementById('svx-view-feed');
+      if (!feedView || !feedView.classList.contains('active')) return;
+      if (this.isRefreshing) return;
+
+      // Only initiate if scrolled to absolute top
+      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+      if (scrollTop > 2) return;
+
+      if (e.touches.length === 1) {
+        startY = e.touches[0].clientY;
+        startX = e.touches[0].clientX;
+        isTracking = true;
+        isPulling = false;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!isTracking || this.isRefreshing) return;
+      if (e.touches.length !== 1) return;
+
+      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+      if (scrollTop > 2) {
+        resetPTR();
+        return;
+      }
+
+      const touchY = e.touches[0].clientY;
+      const touchX = e.touches[0].clientX;
+      const diffY = touchY - startY;
+      const diffX = Math.abs(touchX - startX);
+
+      // If scrolling upwards or swiping horizontally, cancel pulling
+      if (diffY <= 0 || diffX > diffY) return;
+
+      if (!isPulling && diffY > 6) {
+        isPulling = true;
+        ptr.classList.add('svx-ptr-dragging', 'svx-ptr-visible');
+      }
+
+      if (isPulling) {
+        // Damped resistance formula (rubber-band physics)
+        const pullDistance = Math.min(95, diffY * 0.42);
+        const translateY = -85 + (pullDistance * 1.35);
+        const scale = 0.88 + (pullDistance / 95) * 0.12;
+
+        ptr.style.transform = `translate(-50%, ${translateY}px) scale(${scale})`;
+        ptr.style.opacity = Math.min(1, pullDistance / 35);
+
+        const rotation = (pullDistance / PULL_THRESHOLD) * 360;
+        if (icon) {
+          icon.style.transform = `rotate(${rotation}deg)`;
+        }
+
+        if (pullDistance >= PULL_THRESHOLD) {
+          if (!ptr.classList.contains('svx-ptr-ready')) {
+            ptr.classList.add('svx-ptr-ready');
+            if (text) text.textContent = 'Release to refresh';
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              try { navigator.vibrate(15); } catch {}
+            }
+          }
+        } else {
+          if (ptr.classList.contains('svx-ptr-ready')) {
+            ptr.classList.remove('svx-ptr-ready');
+            if (text) text.textContent = 'Pull to refresh';
+          }
+        }
+
+        if (e.cancelable && pullDistance > 12) {
+          e.preventDefault();
+        }
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+      if (!isTracking) return;
+      const wasPulling = isPulling;
+      const wasReady = ptr.classList.contains('svx-ptr-ready');
+      isTracking = false;
+      isPulling = false;
+
+      if (wasPulling && wasReady && !this.isRefreshing) {
+        this.refreshFeed();
+      } else if (wasPulling) {
+        resetPTR();
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchcancel', () => {
+      resetPTR();
+    }, { passive: true });
+  }
+
+  async refreshFeed() {
+    if (this.isRefreshing) return;
+    this.isRefreshing = true;
+
+    const ptr = document.getElementById('svx-pull-to-refresh');
+    const icon = ptr?.querySelector('.svx-ptr-icon');
+    const iconWrap = ptr?.querySelector('.svx-ptr-icon-wrap');
+    const text = ptr?.querySelector('.svx-ptr-text');
+
+    if (ptr) {
+      ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready');
+      ptr.classList.add('svx-ptr-refreshing', 'svx-ptr-visible');
+      ptr.style.transform = 'translate(-50%, 0) scale(1)';
+      ptr.style.opacity = '1';
+      if (icon) icon.style.transform = '';
+      if (text) text.textContent = 'Refreshing...';
+    }
+
+    const startTime = Date.now();
+
+    try {
+      this.page = 1;
+      const latestShayaris = await db.getFeed(1, CONFIG.FEED_PAGE_SIZE);
+
+      // Smooth visual timing (minimum 400ms so spinner feels natural, not jerky)
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 400) {
+        await new Promise(r => setTimeout(r, 400 - elapsed));
+      }
+
+      if (latestShayaris && Array.isArray(latestShayaris) && latestShayaris.length > 0) {
+        this.renderFeedItems(latestShayaris);
+        try {
+          db.local?.setCachedFeed?.(latestShayaris);
+        } catch {}
+      }
+
+      if (ptr) {
+        ptr.classList.remove('svx-ptr-refreshing');
+        ptr.classList.add('svx-ptr-success');
+        if (iconWrap) {
+          iconWrap.innerHTML = renderIcon('Check', 'svx-icon svx-ptr-icon');
+        }
+        if (text) text.textContent = 'Updated!';
+      }
+
+      await new Promise(r => setTimeout(r, 450));
+    } catch (err) {
+      console.warn('[SVX Feed] Refresh error:', err);
+      showToast('Could not refresh feed. Check connection.', 'AlertCircle');
+    } finally {
+      if (ptr) {
+        ptr.style.transform = 'translate(-50%, -85px) scale(0.9)';
+        ptr.style.opacity = '0';
+        setTimeout(() => {
+          ptr.className = 'svx-pull-to-refresh';
+          ptr.style.transform = '';
+          ptr.style.opacity = '';
+          if (iconWrap) {
+            iconWrap.innerHTML = `
+              <svg class="svx-icon svx-ptr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                <path d="M16 21h5v-5"/>
+              </svg>
+            `;
+          }
+          if (text) text.textContent = 'Pull to refresh';
+          this.isRefreshing = false;
+        }, 300);
+      } else {
+        this.isRefreshing = false;
+      }
+    }
   }
 
   setupIntersectionObserver() {
@@ -2361,7 +2557,14 @@ export class SVXRouter {
       item.addEventListener('click', () => {
         const targetView = item.getAttribute('data-nav-view');
         if (targetView) {
-          this.switchView(targetView);
+          if (targetView === 'feed' && this.currentView === 'feed') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (typeof this.onFeedRefresh === 'function') {
+              this.onFeedRefresh();
+            }
+          } else {
+            this.switchView(targetView);
+          }
         }
       });
     });
@@ -2691,6 +2894,9 @@ export function initUI() {
 
   // 9. Initialize Router
   router = new SVXRouter(composerModal, authModal, profileController);
+  if (feedController) {
+    router.onFeedRefresh = () => feedController.refreshFeed();
+  }
 
   // 10. Real-time Offline & Online Network Monitor
   initNetworkMonitor(feedController, profileController);
