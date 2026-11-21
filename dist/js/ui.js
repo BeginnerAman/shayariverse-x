@@ -2672,6 +2672,27 @@ export class SVXProfileController {
   }
 }
 
+/**
+ * Dynamic Multi-Tier Typography Scaler for Full-Screen Reels
+ * Guarantees that short 2-liners are bold & spacious, while 8-10 line poems
+ * scale gracefully to fit the screen without any internal scrolling.
+ */
+export function getReelAutoFitClass(content) {
+  const lines = (content || '').trim().split('\n').filter(l => l.trim().length > 0);
+  const lineCount = lines.length;
+  const charCount = (content || '').length;
+
+  if (lineCount >= 7 || charCount > 220) {
+    return 'reel-text-compact';
+  } else if (lineCount >= 5 || charCount > 130) {
+    return 'reel-text-small';
+  } else if (lineCount >= 3 || charCount > 65) {
+    return 'reel-text-medium';
+  } else {
+    return 'reel-text-large';
+  }
+}
+
 /* 10. Reels & Stream Controller (Full-Screen Vertical Snap & Auto-Music Discovery) */
 export class SVXReelsController {
   constructor({ container, commentModal, shareEngine, authModal, getRouter }) {
@@ -2783,7 +2804,7 @@ export class SVXReelsController {
 
     const authorInitials = (shayari.author_name || 'U').slice(0, 2);
     const fontClass = `font-${shayari.font_style || 'nastaliq'}`;
-    const sizeClass = getAutoFitClass(shayari.content || '');
+    const sizeClass = getReelAutoFitClass(shayari.content || '');
     const moodTheme = shayari.mood_theme || 'purple';
     const verifiedBadgeHTML = shayari.is_verified ? renderIcon('BadgeCheck') : '';
 
@@ -2811,15 +2832,15 @@ export class SVXReelsController {
             ${shayari.category ? `<span class="svx-badge" style="font-size: 10px; padding: 3px 8px;">${escapeHtml(shayari.category)}</span>` : ''}
           </div>
 
-          <!-- Body: Dynamic Poetic Typography -->
+          <!-- Body: Dynamic Poetic Typography (Strictly Zero Scroll) -->
           <div class="svx-reel-content">
             <div class="svx-shayari-text ${fontClass} ${sizeClass}"></div>
           </div>
 
-          <!-- Footer: Viral Background Music Pill & Soundwave -->
+          <!-- Footer: Viral Background Music Pill & Soundwave (Click to Pause/Play) -->
           <div class="svx-reel-footer">
             ${hasSong ? `
-              <div class="svx-reel-music-pill" data-action="toggle-audio" title="Tap to mute/unmute audio">
+              <div class="svx-reel-music-pill ${this.isMuted ? 'muted' : ''}" data-action="reel-music-pill" title="Tap to pause/play audio">
                 <div class="svx-vinyl-disc" aria-hidden="true">
                   ${renderIcon('Disc')}
                 </div>
@@ -2839,7 +2860,7 @@ export class SVXReelsController {
           </div>
         </article>
 
-        <!-- Right Floating Action Stack (Reels Style) -->
+        <!-- Right Floating Action Stack (Like, Comment, Share) -->
         <aside class="svx-reel-action-stack" aria-label="Reel Actions">
           <!-- Like Button -->
           <button class="svx-reel-action-btn ${isLiked ? 'liked' : ''}" data-action="reel-like" aria-label="Like Shayari">
@@ -2858,13 +2879,6 @@ export class SVXReelsController {
             ${renderIcon('Share2')}
             <span class="svx-reel-action-count">Share</span>
           </button>
-
-          <!-- Audio Mute / Unmute Toggle Button -->
-          ${hasSong ? `
-            <button class="svx-reel-action-btn" data-action="reel-mute" aria-label="Mute or Unmute Audio">
-              ${renderIcon(this.isMuted ? 'VolumeX' : 'Volume2')}
-            </button>
-          ` : ''}
         </aside>
       </div>
     `;
@@ -2972,27 +2986,26 @@ export class SVXReelsController {
       });
     }
 
-    // 6. Mute Toggle / Audio Toggle
-    const muteBtn = slide.querySelector('[data-action="reel-mute"]');
+    // 6. Music Pill Tap: Primary Audio Play/Pause Toggle
     const musicPill = slide.querySelector('.svx-reel-music-pill');
+    if (musicPill && shayari.song_url) {
+      musicPill.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.isMuted = !this.isMuted;
+        this.updateAudioStateAcrossSlides();
 
-    const toggleAudio = (e) => {
-      e.stopPropagation();
-      this.isMuted = !this.isMuted;
-      this.updateMuteStateAcrossSlides();
-
-      if (this.isMuted) {
-        audioEngine.pause();
-      } else if (this.activeSlide === slide && shayari.song_url) {
-        audioEngine.play(shayari.song_url, {
-          name: shayari.song_name || 'Shayari BGM',
-          artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
-        }).catch(() => {});
-      }
-    };
-
-    if (muteBtn) muteBtn.addEventListener('click', toggleAudio);
-    if (musicPill && shayari.song_url) musicPill.addEventListener('click', toggleAudio);
+        if (this.isMuted) {
+          audioEngine.pause();
+          showToast("Music muted", "VolumeX", 1500);
+        } else if (this.activeSlide === slide) {
+          audioEngine.play(shayari.song_url, {
+            name: shayari.song_name || 'Shayari BGM',
+            artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
+          }).catch(() => {});
+          showToast("Music playing", "Volume2", 1500);
+        }
+      });
+    }
   }
 
   onSlideActive(slide) {
@@ -3003,15 +3016,33 @@ export class SVXReelsController {
     if (!shayari) return;
 
     // Reset visualizer animations on all other slides
+    this.container.querySelectorAll('.svx-reel-slide').forEach(s => s.classList.remove('active-slide'));
     this.container.querySelectorAll('.svx-vinyl-disc').forEach(el => el.classList.remove('spinning'));
     this.container.querySelectorAll('.svx-music-soundwave').forEach(el => el.classList.remove('active'));
 
+    slide.classList.add('active-slide');
     const vinyl = slide.querySelector('.svx-vinyl-disc');
     const soundwave = slide.querySelector('.svx-music-soundwave');
+    const musicPill = slide.querySelector('.svx-reel-music-pill');
+
+    // Dynamic text fitting guard: guarantees zero overflow, zero clipping, zero scroll
+    const textEl = slide.querySelector('.svx-shayari-text');
+    const contentEl = slide.querySelector('.svx-reel-content');
+    if (textEl && contentEl && contentEl.clientHeight > 0) {
+      let currentSize = parseFloat(window.getComputedStyle(textEl).fontSize) || 16;
+      let attempts = 0;
+      while (textEl.scrollHeight > contentEl.clientHeight && currentSize > 11 && attempts < 20) {
+        currentSize -= 0.5;
+        textEl.style.fontSize = `${currentSize}px`;
+        textEl.style.lineHeight = '1.38';
+        attempts++;
+      }
+    }
 
     if (shayari.song_url && !this.isMuted) {
       vinyl?.classList.add('spinning');
       soundwave?.classList.add('active');
+      musicPill?.classList.remove('muted');
 
       audioEngine.play(shayari.song_url, {
         name: shayari.song_name || 'Shayari BGM',
@@ -3020,6 +3051,7 @@ export class SVXReelsController {
         console.warn('[SVX Reels] Autoplay blocked by browser policy:', err);
       });
     } else {
+      musicPill?.classList.toggle('muted', this.isMuted);
       audioEngine.pause();
     }
   }
@@ -3052,9 +3084,9 @@ export class SVXReelsController {
     }
   }
 
-  updateMuteStateAcrossSlides() {
-    this.container.querySelectorAll('[data-action="reel-mute"]').forEach(btn => {
-      btn.innerHTML = renderIcon(this.isMuted ? 'VolumeX' : 'Volume2');
+  updateAudioStateAcrossSlides() {
+    this.container.querySelectorAll('.svx-reel-music-pill').forEach(pill => {
+      pill.classList.toggle('muted', this.isMuted);
     });
 
     if (this.activeSlide) {

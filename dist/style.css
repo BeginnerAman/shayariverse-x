@@ -3261,6 +3261,7 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   height: calc(100dvh - var(--svx-top-bar-height) - var(--svx-bottom-nav-height) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 36px);
   overflow: hidden;
   position: relative;
+  contain: strict;
 }
 
 .svx-reels-feed {
@@ -3271,7 +3272,8 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   scrollbar-width: none;
-  scroll-behavior: smooth;
+  touch-action: pan-y;
+  /* Removed scroll-behavior: smooth to enable 120Hz native touch flick physics without friction */
 }
 
 .svx-reels-feed::-webkit-scrollbar {
@@ -3282,13 +3284,18 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   width: 100%;
   height: 100%;
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  scroll-snap-stop: normal;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  padding: 10px 14px;
+  padding: 4px 10px;
   box-sizing: border-box;
+  touch-action: pan-y;
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  contain: content;
 }
 
 .svx-reel-card-wrapper {
@@ -3296,7 +3303,6 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   width: 100%;
   max-width: 440px;
   height: 100%;
-  max-height: 92%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3305,31 +3311,32 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
 .svx-reel-card {
   width: 100%;
   height: 100%;
-  border-radius: 28px;
+  border-radius: 22px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 20px 18px;
+  padding: 14px 14px 12px 14px;
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
-  background: rgba(14, 14, 26, 0.78);
-  backdrop-filter: blur(28px) saturate(200%);
-  -webkit-backdrop-filter: blur(28px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  background: linear-gradient(165deg, rgba(16, 16, 30, 0.94) 0%, rgba(9, 9, 18, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   user-select: none;
   -webkit-user-select: none;
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .svx-reel-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
 }
 
 .svx-reel-card-meta {
@@ -3343,47 +3350,86 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   color: var(--svx-text-muted);
 }
 
+/* 100% No Internal Scrolling: Auto-Adaptive Typography Container */
 .svx-reel-content {
   flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 16px 54px 16px 16px;
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.svx-reel-content::-webkit-scrollbar {
-  display: none;
+  padding: 8px 48px 8px 10px;
+  overflow: hidden; /* Strictly NO inner scrolling ever! */
+  position: relative;
 }
 
 .svx-reel-content .svx-shayari-text {
   width: 100%;
   margin: 0 auto;
-  line-height: 1.8;
   word-break: break-word;
+  white-space: pre-line;
+  transition: font-size 0.15s ease, line-height 0.15s ease;
+}
+
+/* Dynamic Multi-Tier Typography */
+.svx-reel-content .svx-shayari-text.reel-text-compact {
+  font-size: 13.5px;
+  line-height: 1.42;
+  font-weight: 400;
+}
+
+.svx-reel-content .svx-shayari-text.reel-text-small {
+  font-size: 15.5px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.svx-reel-content .svx-shayari-text.reel-text-medium {
+  font-size: 18.5px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.svx-reel-content .svx-shayari-text.reel-text-large {
+  font-size: 22px;
+  line-height: 1.65;
+  font-weight: 600;
 }
 
 .svx-reel-footer {
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
+/* Clickable Music Pill: Primary Audio Play/Pause Toggle */
 .svx-reel-music-pill {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px;
+  padding: 7px 14px;
   border-radius: var(--svx-glass-radius-pill);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  max-width: 82%;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  max-width: 84%;
   overflow: hidden;
   cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.svx-reel-music-pill:active {
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.svx-reel-music-pill.muted {
+  opacity: 0.65;
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .svx-vinyl-disc {
@@ -3393,7 +3439,7 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   align-items: center;
   justify-content: center;
   color: #c084fc;
-  transition: transform 0.3s ease;
+  flex-shrink: 0;
 }
 
 .svx-vinyl-disc.spinning {
@@ -3408,9 +3454,12 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
 
 .svx-music-ticker-text {
   display: inline-block;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
   color: var(--svx-text-secondary);
+}
+
+.svx-reel-slide.active-slide .svx-music-ticker-text {
   animation: svx-marquee 12s linear infinite;
 }
 
@@ -3425,6 +3474,7 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   align-items: flex-end;
   gap: 2.5px;
   height: 14px;
+  flex-shrink: 0;
 }
 
 .svx-music-soundwave span {
@@ -3445,11 +3495,11 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   50% { height: 14px; }
 }
 
-/* Right Floating Action Stack (Reels Style) */
+/* Streamlined Right Floating Action Stack: Like, Comment, Share */
 .svx-reel-action-stack {
   position: absolute;
-  right: 8px;
-  bottom: 24px;
+  right: 6px;
+  bottom: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3458,11 +3508,9 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
 }
 
 .svx-reel-action-btn {
-  background: rgba(14, 14, 26, 0.72);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(18, 18, 32, 0.84);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
   border-radius: 50%;
   width: 44px;
   height: 44px;
@@ -3474,7 +3522,8 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   cursor: pointer;
   outline: none;
   position: relative;
-  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease, border-color 0.15s ease;
+  will-change: transform;
 }
 
 .svx-reel-action-btn:active {
@@ -3485,7 +3534,7 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   width: 20px;
   height: 20px;
   stroke: currentColor;
-  transition: transform 0.2s ease, fill 0.2s ease, stroke 0.2s ease;
+  transition: transform 0.15s ease, fill 0.15s ease, stroke 0.15s ease;
 }
 
 .svx-reel-action-count {
@@ -3500,7 +3549,7 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
 .svx-reel-action-btn.liked {
   color: #ff4081;
   border-color: rgba(255, 64, 129, 0.45);
-  background: rgba(255, 64, 129, 0.15);
+  background: rgba(255, 64, 129, 0.18);
 }
 
 .svx-reel-action-btn.liked .svx-icon {
