@@ -2703,13 +2703,16 @@ export class SVXReelsController {
     this.getRouter = getRouter;
 
     this.reels = [];
+    this.currentIndex = 0;
     this.activeSlide = null;
     this.isMuted = false;
     this.observer = null;
     this.hasLoaded = false;
     this.isLoading = false;
+    this.isTransitioning = false;
 
     this.setupObserver();
+    this.setupGestureController();
   }
 
   setupObserver() {
@@ -2718,6 +2721,8 @@ export class SVXReelsController {
     this.observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
+          const idx = parseInt(entry.target.getAttribute('data-index') || '0', 10);
+          this.currentIndex = idx;
           this.onSlideActive(entry.target);
         }
       });
@@ -2725,6 +2730,58 @@ export class SVXReelsController {
       root: this.container,
       threshold: 0.65
     });
+  }
+
+  setupGestureController() {
+    let startY = 0;
+    let startX = 0;
+    let isTracking = false;
+
+    this.container.addEventListener('touchstart', (e) => {
+      if (this.isTransitioning || e.touches.length !== 1) return;
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      isTracking = true;
+    }, { passive: true });
+
+    this.container.addEventListener('touchend', (e) => {
+      if (!isTracking || this.isTransitioning) return;
+      isTracking = false;
+
+      const endY = e.changedTouches[0].clientY;
+      const endX = e.changedTouches[0].clientX;
+      const deltaY = endY - startY;
+      const deltaX = endX - startX;
+
+      // Strictly 1 reel per swipe: detect clean vertical flick
+      if (Math.abs(deltaY) > 35 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        if (deltaY < 0 && this.currentIndex < this.reels.length - 1) {
+          // Swipe up -> Strictly 1 next reel
+          this.goToSlide(this.currentIndex + 1);
+        } else if (deltaY > 0 && this.currentIndex > 0) {
+          // Swipe down -> Strictly 1 previous reel
+          this.goToSlide(this.currentIndex - 1);
+        } else {
+          this.goToSlide(this.currentIndex);
+        }
+      }
+    }, { passive: true });
+  }
+
+  goToSlide(index) {
+    const slides = this.container.querySelectorAll('.svx-reel-slide');
+    if (!slides[index]) return;
+
+    this.currentIndex = index;
+    const targetSlide = slides[index];
+
+    this.isTransitioning = true;
+    targetSlide.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    setTimeout(() => {
+      this.isTransitioning = false;
+      this.onSlideActive(targetSlide);
+    }, 320);
   }
 
   async loadReels() {
@@ -2781,6 +2838,7 @@ export class SVXReelsController {
     });
 
     this.container.scrollTop = 0;
+    this.currentIndex = 0;
 
     const firstSlide = this.container.querySelector('.svx-reel-slide');
     if (firstSlide) {
@@ -2804,7 +2862,7 @@ export class SVXReelsController {
 
     const authorInitials = (shayari.author_name || 'U').slice(0, 2);
     const fontClass = `font-${shayari.font_style || 'nastaliq'}`;
-    const sizeClass = getReelAutoFitClass(shayari.content || '');
+    const sizeClass = getAutoFitClass(shayari.content || '');
     const moodTheme = shayari.mood_theme || 'purple';
     const verifiedBadgeHTML = shayari.is_verified ? renderIcon('BadgeCheck') : '';
 
@@ -2832,9 +2890,11 @@ export class SVXReelsController {
             ${shayari.category ? `<span class="svx-badge" style="font-size: 10px; padding: 3px 8px;">${escapeHtml(shayari.category)}</span>` : ''}
           </div>
 
-          <!-- Body: Dynamic Poetic Typography (Strictly Zero Scroll) -->
+          <!-- Body: Dynamic Poetic Typography with Feed-Grade Quotation Styling -->
           <div class="svx-reel-content">
+            <div class="svx-quote-mark svx-quote-open">&ldquo;</div>
             <div class="svx-shayari-text ${fontClass} ${sizeClass}"></div>
+            <div class="svx-quote-mark svx-quote-close">&rdquo;</div>
           </div>
 
           <!-- Footer: Viral Background Music Pill & Soundwave (Click to Pause/Play) -->
@@ -2844,8 +2904,9 @@ export class SVXReelsController {
                 <div class="svx-vinyl-disc" aria-hidden="true">
                   ${renderIcon('Disc')}
                 </div>
-                <div class="svx-music-ticker">
-                  <span class="svx-music-ticker-text">${escapeHtml(songTitle)} • ${escapeHtml(songArtist)}</span>
+                <div class="svx-reel-music-meta">
+                  <span class="svx-reel-song-title">${escapeHtml(songTitle)}</span>
+                  <span class="svx-reel-song-artist">${escapeHtml(songArtist)}</span>
                 </div>
                 <div class="svx-music-soundwave" aria-hidden="true">
                   <span></span><span></span><span></span><span></span>
@@ -2854,13 +2915,16 @@ export class SVXReelsController {
             ` : `
               <div class="svx-reel-music-pill" style="opacity: 0.55; cursor: default;">
                 <div class="svx-vinyl-disc" aria-hidden="true">${renderIcon('Feather')}</div>
-                <span style="font-size: 11px; color: var(--svx-text-secondary); margin-left: 6px;">Pure Poetry</span>
+                <div class="svx-reel-music-meta">
+                  <span class="svx-reel-song-title">Pure Poetry</span>
+                  <span class="svx-reel-song-artist">No BGM</span>
+                </div>
               </div>
             `}
           </div>
         </article>
 
-        <!-- Right Floating Action Stack (Like, Comment, Share) -->
+        <!-- Right Floating Action Stack: Elevated Above Bottom Music Bar -->
         <aside class="svx-reel-action-stack" aria-label="Reel Actions">
           <!-- Like Button -->
           <button class="svx-reel-action-btn ${isLiked ? 'liked' : ''}" data-action="reel-like" aria-label="Like Shayari">

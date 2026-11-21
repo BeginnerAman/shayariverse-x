@@ -3284,7 +3284,7 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   width: 100%;
   height: 100%;
   scroll-snap-align: start;
-  scroll-snap-stop: normal;
+  scroll-snap-stop: always;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3350,17 +3350,37 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   color: var(--svx-text-muted);
 }
 
-/* 100% No Internal Scrolling: Auto-Adaptive Typography Container */
+/* 100% Balanced Centered Typography with Elegant Quote Accents */
 .svx-reel-content {
   flex: 1;
   min-height: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
+  align-items: center;
   text-align: center;
-  padding: 8px 48px 8px 10px;
-  overflow: hidden; /* Strictly NO inner scrolling ever! */
+  padding: 8px 24px;
+  overflow: hidden;
   position: relative;
+}
+
+.svx-reel-content .svx-quote-mark {
+  width: 100%;
+  font-size: 28px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.18);
+  font-family: var(--svx-font-display);
+  pointer-events: none;
+}
+
+.svx-reel-content .svx-quote-open {
+  text-align: left;
+  margin-bottom: -4px;
+}
+
+.svx-reel-content .svx-quote-close {
+  text-align: right;
+  margin-top: -4px;
 }
 
 .svx-reel-content .svx-shayari-text {
@@ -3368,32 +3388,29 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   margin: 0 auto;
   word-break: break-word;
   white-space: pre-line;
-  transition: font-size 0.15s ease, line-height 0.15s ease;
+  text-align: center;
+  color: var(--svx-text-primary);
+  letter-spacing: 0.015em;
+  padding: 4px 8px;
 }
 
-/* Dynamic Multi-Tier Typography */
-.svx-reel-content .svx-shayari-text.reel-text-compact {
-  font-size: 13.5px;
-  line-height: 1.42;
-  font-weight: 400;
-}
-
-.svx-reel-content .svx-shayari-text.reel-text-small {
-  font-size: 15.5px;
-  line-height: 1.5;
-  font-weight: 500;
-}
-
-.svx-reel-content .svx-shayari-text.reel-text-medium {
-  font-size: 18.5px;
-  line-height: 1.6;
-  font-weight: 500;
-}
-
-.svx-reel-content .svx-shayari-text.reel-text-large {
-  font-size: 22px;
-  line-height: 1.65;
+/* Harmonious Multi-Tier Font Sizing */
+.svx-reel-content .svx-shayari-text.size-short {
+  font-size: 21px;
+  line-height: 1.62;
   font-weight: 600;
+}
+
+.svx-reel-content .svx-shayari-text.size-medium {
+  font-size: 18px;
+  line-height: 1.58;
+  font-weight: 500;
+}
+
+.svx-reel-content .svx-shayari-text.size-long {
+  font-size: 15.5px;
+  line-height: 1.52;
+  font-weight: 500;
 }
 
 .svx-reel-footer {
@@ -3405,7 +3422,7 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   flex-shrink: 0;
 }
 
-/* Clickable Music Pill: Primary Audio Play/Pause Toggle */
+/* Static, Professional 2-Line Audio Pill (No Marquee Shaking) */
 .svx-reel-music-pill {
   display: flex;
   align-items: center;
@@ -3414,7 +3431,7 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   border-radius: var(--svx-glass-radius-pill);
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  max-width: 84%;
+  max-width: 80%;
   overflow: hidden;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
@@ -3433,8 +3450,8 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
 }
 
 .svx-vinyl-disc {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3446,27 +3463,34 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   animation: svx-spin 2.8s linear infinite;
 }
 
-.svx-music-ticker {
+.svx-reel-music-meta {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
   overflow: hidden;
+}
+
+.svx-reel-song-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--svx-text-primary);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
-.svx-music-ticker-text {
-  display: inline-block;
-  font-size: 11.5px;
-  font-weight: 500;
+.svx-reel-song-artist {
+  font-size: 10.5px;
+  font-weight: 400;
   color: var(--svx-text-secondary);
-}
-
-.svx-reel-slide.active-slide .svx-music-ticker-text {
-  animation: svx-marquee 12s linear infinite;
-}
-
-@keyframes svx-marquee {
-  0% { transform: translateX(0%); }
-  50% { transform: translateX(-40%); }
-  100% { transform: translateX(0%); }
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .svx-music-soundwave {
@@ -3495,15 +3519,15 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   50% { height: 14px; }
 }
 
-/* Streamlined Right Floating Action Stack: Like, Comment, Share */
+/* Streamlined Right Floating Action Stack: Elevated Above Bottom Music Bar */
 .svx-reel-action-stack {
   position: absolute;
-  right: 6px;
-  bottom: 20px;
+  right: 12px;
+  bottom: 80px; /* Positioned clearly above bottom music bar */
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   z-index: 10;
 }
 
