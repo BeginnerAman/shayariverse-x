@@ -44,7 +44,10 @@ export const ICONS = {
   Repeat1: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/><path d="M11 10h1v4"/></svg>`,
   Shuffle: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>`,
   SkipBack: `<svg class="svx-icon" viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>`,
-  SkipForward: `<svg class="svx-icon" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>`
+  SkipForward: `<svg class="svx-icon" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>`,
+  Film: `<svg class="svx-icon" viewBox="0 0 24 24"><rect width="20" height="15" x="2" y="4.5" rx="3"/><polygon points="10 8.5 15 12 10 15.5" fill="currentColor"/></svg>`,
+  RefreshCw: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>`,
+  PenLine: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`
 };
 
 /**
@@ -263,14 +266,23 @@ export function createFeedCardElement(shayari) {
 
 /**
  * Global 0ms Like State Synchronizer
- * Synchronizes heart glow and count simultaneously across Feed and Profile tabs
+ * Synchronizes heart glow and count simultaneously across Feed, Profile, and Reels tabs
  */
 export function syncLikeStateInDOM(shayariId, isLiked, count) {
   if (!shayariId) return;
-  const matchingButtons = document.querySelectorAll(`.svx-feed-card[data-shayari-id="${shayariId}"] [data-action="like"]`);
-  matchingButtons.forEach(btn => {
+
+  // 1. Synchronize Feed & Profile cards
+  const feedButtons = document.querySelectorAll(`.svx-feed-card[data-shayari-id="${shayariId}"] [data-action="like"]`);
+  feedButtons.forEach(btn => {
     btn.classList.toggle('liked', isLiked);
     btn.innerHTML = `${renderIcon(isLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${count}</span>`;
+  });
+
+  // 2. Synchronize Full-Screen Reels slides
+  const reelButtons = document.querySelectorAll(`.svx-reel-slide[data-shayari-id="${shayariId}"] [data-action="reel-like"]`);
+  reelButtons.forEach(btn => {
+    btn.classList.toggle('liked', isLiked);
+    btn.innerHTML = `${renderIcon(isLiked ? 'HeartFilled' : 'Heart')}<span class="svx-reel-action-count">${count}</span>`;
   });
 }
 
@@ -300,8 +312,9 @@ export async function triggerHeartBurst(cardElement, shayariId) {
     overlay.remove();
   }, 800);
 
-  const likeBtn = cardElement.querySelector('[data-action="like"]');
-  const countSpan = likeBtn?.querySelector('.svx-like-count');
+  const slideWrapper = cardElement.closest('.svx-reel-slide');
+  const likeBtn = cardElement.querySelector('[data-action="like"]') || slideWrapper?.querySelector('[data-action="reel-like"]');
+  const countSpan = likeBtn?.querySelector('.svx-like-count') || likeBtn?.querySelector('.svx-reel-action-count');
   const wasLiked = likeBtn?.classList.contains('liked');
 
   // Double-tap should always LIKE (or replay heart burst if already liked), never unlike
@@ -2659,13 +2672,461 @@ export class SVXProfileController {
   }
 }
 
+/* 10. Reels & Stream Controller (Full-Screen Vertical Snap & Auto-Music Discovery) */
+export class SVXReelsController {
+  constructor({ container, commentModal, shareEngine, authModal, getRouter }) {
+    this.container = container;
+    this.commentModal = commentModal;
+    this.shareEngine = shareEngine;
+    this.authModal = authModal;
+    this.getRouter = getRouter;
+
+    this.reels = [];
+    this.activeSlide = null;
+    this.isMuted = false;
+    this.observer = null;
+    this.hasLoaded = false;
+    this.isLoading = false;
+
+    this.setupObserver();
+  }
+
+  setupObserver() {
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    this.observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          this.onSlideActive(entry.target);
+        }
+      });
+    }, {
+      root: this.container,
+      threshold: 0.65
+    });
+  }
+
+  async loadReels() {
+    if (this.isLoading) return;
+    this.isLoading = true;
+
+    try {
+      this.container.innerHTML = `
+        <div class="svx-reel-empty-state">
+          <div class="svx-album-art playing" style="width: 48px; height: 48px; margin-bottom: 16px;">
+            ${renderIcon('Disc')}
+          </div>
+          <div style="font-size: 14px; font-weight: 500; color: var(--svx-text-secondary);">Curating Discovery Stream...</div>
+        </div>
+      `;
+
+      // Fetch posts across categories from unified DB
+      const items = await db.getFeed(1, 60);
+
+      if (!items || items.length === 0) {
+        this.renderEmpty();
+        return;
+      }
+
+      // Fisher-Yates shuffle for diverse, fair discovery across all poets
+      this.reels = this.shuffle(items);
+      this.render();
+      this.hasLoaded = true;
+    } catch (err) {
+      console.error('[SVX Reels] Error loading stream:', err);
+      this.renderError();
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  shuffle(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  render() {
+    this.container.innerHTML = '';
+    this.observer?.disconnect();
+
+    this.reels.forEach((shayari, index) => {
+      const slide = this.createSlideElement(shayari, index);
+      this.container.appendChild(slide);
+      this.observer?.observe(slide);
+    });
+
+    this.container.scrollTop = 0;
+
+    const firstSlide = this.container.querySelector('.svx-reel-slide');
+    if (firstSlide) {
+      setTimeout(() => {
+        this.onSlideActive(firstSlide);
+      }, 150);
+    }
+  }
+
+  createSlideElement(shayari, index) {
+    const slide = document.createElement('div');
+    slide.className = 'svx-reel-slide';
+    slide.setAttribute('data-shayari-id', shayari.id);
+    slide.setAttribute('data-index', index);
+    slide._shayari = shayari;
+
+    const currentUser = db.getCurrentUser();
+    const isLiked = Array.isArray(shayari.liked_by) && currentUser?.id 
+      ? shayari.liked_by.includes(currentUser.id) 
+      : false;
+
+    const authorInitials = (shayari.author_name || 'U').slice(0, 2);
+    const fontClass = `font-${shayari.font_style || 'nastaliq'}`;
+    const sizeClass = getAutoFitClass(shayari.content || '');
+    const moodTheme = shayari.mood_theme || 'purple';
+    const verifiedBadgeHTML = shayari.is_verified ? renderIcon('BadgeCheck') : '';
+
+    const hasSong = !!shayari.song_url;
+    const songTitle = shayari.song_name || 'Original Score';
+    const songArtist = shayari.song_artist || shayari.author_name || 'Viral Audio';
+
+    slide.innerHTML = `
+      <div class="svx-reel-card-wrapper">
+        <article class="svx-reel-card mood-${moodTheme}" data-mood="${moodTheme}">
+          <!-- Header: Author info & Verified Badge -->
+          <div class="svx-reel-card-header">
+            <div class="svx-reel-card-meta svx-author-group" data-action="view-profile" data-handle="${escapeHtml(shayari.author_handle)}">
+              <div class="svx-author-avatar" aria-hidden="true">${escapeHtml(authorInitials)}</div>
+              <div>
+                <div class="svx-author-name-row">
+                  <span class="svx-author-name" style="font-size: 14px;">${escapeHtml(shayari.author_name)}</span>
+                  ${verifiedBadgeHTML}
+                </div>
+                <div class="svx-reel-time">
+                  @${escapeHtml(shayari.author_handle)} • ${formatTimeAgo(shayari.created_at)}
+                </div>
+              </div>
+            </div>
+            ${shayari.category ? `<span class="svx-badge" style="font-size: 10px; padding: 3px 8px;">${escapeHtml(shayari.category)}</span>` : ''}
+          </div>
+
+          <!-- Body: Dynamic Poetic Typography -->
+          <div class="svx-reel-content">
+            <div class="svx-shayari-text ${fontClass} ${sizeClass}"></div>
+          </div>
+
+          <!-- Footer: Viral Background Music Pill & Soundwave -->
+          <div class="svx-reel-footer">
+            ${hasSong ? `
+              <div class="svx-reel-music-pill" data-action="toggle-audio" title="Tap to mute/unmute audio">
+                <div class="svx-vinyl-disc" aria-hidden="true">
+                  ${renderIcon('Disc')}
+                </div>
+                <div class="svx-music-ticker">
+                  <span class="svx-music-ticker-text">${escapeHtml(songTitle)} • ${escapeHtml(songArtist)}</span>
+                </div>
+                <div class="svx-music-soundwave" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span>
+                </div>
+              </div>
+            ` : `
+              <div class="svx-reel-music-pill" style="opacity: 0.55; cursor: default;">
+                <div class="svx-vinyl-disc" aria-hidden="true">${renderIcon('Feather')}</div>
+                <span style="font-size: 11px; color: var(--svx-text-secondary); margin-left: 6px;">Pure Poetry</span>
+              </div>
+            `}
+          </div>
+        </article>
+
+        <!-- Right Floating Action Stack (Reels Style) -->
+        <aside class="svx-reel-action-stack" aria-label="Reel Actions">
+          <!-- Like Button -->
+          <button class="svx-reel-action-btn ${isLiked ? 'liked' : ''}" data-action="reel-like" aria-label="Like Shayari">
+            ${renderIcon(isLiked ? 'HeartFilled' : 'Heart')}
+            <span class="svx-reel-action-count">${shayari.likes_count || 0}</span>
+          </button>
+
+          <!-- Comment Drawer Button -->
+          <button class="svx-reel-action-btn" data-action="reel-comment" aria-label="Open Comments">
+            ${renderIcon('MessageCircle')}
+            <span class="svx-reel-action-count">${shayari.comments_count || 0}</span>
+          </button>
+
+          <!-- Share Button -->
+          <button class="svx-reel-action-btn" data-action="reel-share" aria-label="Share Quote Card">
+            ${renderIcon('Share2')}
+            <span class="svx-reel-action-count">Share</span>
+          </button>
+
+          <!-- Audio Mute / Unmute Toggle Button -->
+          ${hasSong ? `
+            <button class="svx-reel-action-btn" data-action="reel-mute" aria-label="Mute or Unmute Audio">
+              ${renderIcon(this.isMuted ? 'VolumeX' : 'Volume2')}
+            </button>
+          ` : ''}
+        </aside>
+      </div>
+    `;
+
+    const textEl = slide.querySelector('.svx-shayari-text');
+    if (textEl) {
+      textEl.textContent = shayari.formatted || shayari.content;
+    }
+
+    this.bindSlideEvents(slide, shayari);
+    return slide;
+  }
+
+  bindSlideEvents(slide, shayari) {
+    const card = slide.querySelector('.svx-reel-card');
+
+    // 1. Double-Tap Heart Burst on Card
+    let lastTap = 0;
+    if (card) {
+      card.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('button, a, .svx-author-group, .svx-reel-music-pill')) return;
+        const now = Date.now();
+        if (now - lastTap < 320) {
+          triggerHeartBurst(card, shayari.id);
+          lastTap = 0;
+        } else {
+          lastTap = now;
+        }
+      });
+    }
+
+    // 2. Author Profile Navigation
+    const authorGroup = slide.querySelector('.svx-author-group');
+    if (authorGroup) {
+      authorGroup.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const handle = authorGroup.getAttribute('data-handle');
+        if (handle) {
+          const router = this.getRouter();
+          if (router?.profileController) {
+            router.profileController.viewingHandle = handle;
+            router.profileController.render();
+            router.switchView('profile');
+          }
+        }
+      });
+    }
+
+    // 3. Like Button (0ms Optimistic Synchronized Across Feed, Profile, and Reels)
+    const likeBtn = slide.querySelector('[data-action="reel-like"]');
+    if (likeBtn) {
+      likeBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const currentUser = db.getCurrentUser();
+        const isAuthenticated = currentUser && currentUser.id && currentUser.handle !== 'guest';
+
+        if (!isAuthenticated) {
+          if (this.authModal) {
+            this.authModal.requireAuth(() => {
+              likeBtn.click();
+            });
+          }
+          return;
+        }
+
+        const countSpan = likeBtn.querySelector('.svx-reel-action-count');
+        const isCurrentlyLiked = likeBtn.classList.contains('liked');
+        const currentCount = parseInt(countSpan?.textContent || '0', 10);
+        const nextLiked = !isCurrentlyLiked;
+        const nextCount = Math.max(0, currentCount + (nextLiked ? 1 : -1));
+
+        syncLikeStateInDOM(shayari.id, nextLiked, nextCount);
+
+        try {
+          const result = await db.toggleLike(currentUser.id, shayari.id);
+          if (result && typeof result.newCount === 'number') {
+            syncLikeStateInDOM(shayari.id, result.liked, result.newCount);
+          }
+        } catch (err) {
+          console.warn('[SVX Reels] Like failed:', err);
+          syncLikeStateInDOM(shayari.id, isCurrentlyLiked, currentCount);
+        }
+      });
+    }
+
+    // 4. Comments Drawer
+    const commentBtn = slide.querySelector('[data-action="reel-comment"]');
+    if (commentBtn) {
+      commentBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.commentModal) {
+          this.commentModal.open(shayari.id, shayari);
+        }
+      });
+    }
+
+    // 5. HD Quote Card Share Engine
+    const shareBtn = slide.querySelector('[data-action="reel-share"]');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.shareEngine) {
+          this.shareEngine.shareCard(shayari);
+        }
+      });
+    }
+
+    // 6. Mute Toggle / Audio Toggle
+    const muteBtn = slide.querySelector('[data-action="reel-mute"]');
+    const musicPill = slide.querySelector('.svx-reel-music-pill');
+
+    const toggleAudio = (e) => {
+      e.stopPropagation();
+      this.isMuted = !this.isMuted;
+      this.updateMuteStateAcrossSlides();
+
+      if (this.isMuted) {
+        audioEngine.pause();
+      } else if (this.activeSlide === slide && shayari.song_url) {
+        audioEngine.play(shayari.song_url, {
+          name: shayari.song_name || 'Shayari BGM',
+          artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
+        }).catch(() => {});
+      }
+    };
+
+    if (muteBtn) muteBtn.addEventListener('click', toggleAudio);
+    if (musicPill && shayari.song_url) musicPill.addEventListener('click', toggleAudio);
+  }
+
+  onSlideActive(slide) {
+    if (this.activeSlide === slide) return;
+    this.activeSlide = slide;
+
+    const shayari = slide._shayari;
+    if (!shayari) return;
+
+    // Reset visualizer animations on all other slides
+    this.container.querySelectorAll('.svx-vinyl-disc').forEach(el => el.classList.remove('spinning'));
+    this.container.querySelectorAll('.svx-music-soundwave').forEach(el => el.classList.remove('active'));
+
+    const vinyl = slide.querySelector('.svx-vinyl-disc');
+    const soundwave = slide.querySelector('.svx-music-soundwave');
+
+    if (shayari.song_url && !this.isMuted) {
+      vinyl?.classList.add('spinning');
+      soundwave?.classList.add('active');
+
+      audioEngine.play(shayari.song_url, {
+        name: shayari.song_name || 'Shayari BGM',
+        artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
+      }).catch(err => {
+        console.warn('[SVX Reels] Autoplay blocked by browser policy:', err);
+      });
+    } else {
+      audioEngine.pause();
+    }
+  }
+
+  pause() {
+    audioEngine.pause();
+    this.container.querySelectorAll('.svx-vinyl-disc').forEach(el => el.classList.remove('spinning'));
+    this.container.querySelectorAll('.svx-music-soundwave').forEach(el => el.classList.remove('active'));
+  }
+
+  resume() {
+    if (!this.hasLoaded) {
+      this.loadReels();
+      return;
+    }
+
+    if (this.activeSlide && !this.isMuted) {
+      const shayari = this.activeSlide._shayari;
+      if (shayari?.song_url) {
+        const vinyl = this.activeSlide.querySelector('.svx-vinyl-disc');
+        const soundwave = this.activeSlide.querySelector('.svx-music-soundwave');
+        vinyl?.classList.add('spinning');
+        soundwave?.classList.add('active');
+
+        audioEngine.play(shayari.song_url, {
+          name: shayari.song_name || 'Shayari BGM',
+          artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
+        }).catch(() => {});
+      }
+    }
+  }
+
+  updateMuteStateAcrossSlides() {
+    this.container.querySelectorAll('[data-action="reel-mute"]').forEach(btn => {
+      btn.innerHTML = renderIcon(this.isMuted ? 'VolumeX' : 'Volume2');
+    });
+
+    if (this.activeSlide) {
+      const vinyl = this.activeSlide.querySelector('.svx-vinyl-disc');
+      const soundwave = this.activeSlide.querySelector('.svx-music-soundwave');
+
+      if (this.isMuted) {
+        vinyl?.classList.remove('spinning');
+        soundwave?.classList.remove('active');
+      } else if (this.activeSlide._shayari?.song_url) {
+        vinyl?.classList.add('spinning');
+        soundwave?.classList.add('active');
+      }
+    }
+  }
+
+  renderEmpty() {
+    this.container.innerHTML = `
+      <div class="svx-reel-empty-state">
+        <div class="svx-placeholder-icon" style="margin-bottom: 16px;">
+          ${renderIcon('Feather', 'svx-icon-lg')}
+        </div>
+        <h3 style="font-size: 18px; color: var(--svx-text-primary); margin-bottom: 8px;">No Reels Yet</h3>
+        <p style="font-size: 13px; color: var(--svx-text-secondary); max-width: 280px; margin-bottom: 20px;">
+          Be the first shayar to craft a poetic reel with attached background music.
+        </p>
+        <button class="svx-btn-post" id="svx-reels-empty-create-btn" type="button" style="padding: 10px 20px;">
+          ${renderIcon('PenLine', 'svx-icon-sm')}
+          <span>Create First Reel</span>
+        </button>
+      </div>
+    `;
+
+    const createBtn = this.container.querySelector('#svx-reels-empty-create-btn');
+    createBtn?.addEventListener('click', () => {
+      const router = this.getRouter();
+      router?.composerModal?.open();
+    });
+  }
+
+  renderError() {
+    this.container.innerHTML = `
+      <div class="svx-reel-empty-state">
+        <div class="svx-placeholder-icon" style="margin-bottom: 16px; color: var(--svx-warning);">
+          ${renderIcon('AlertCircle', 'svx-icon-lg')}
+        </div>
+        <h3 style="font-size: 18px; color: var(--svx-text-primary); margin-bottom: 8px;">Failed to Load Stream</h3>
+        <p style="font-size: 13px; color: var(--svx-text-secondary); margin-bottom: 20px;">
+          Please check your connection and try again.
+        </p>
+        <button class="svx-btn-post" id="svx-reels-retry-btn" type="button" style="padding: 10px 20px;">
+          ${renderIcon('RefreshCw', 'svx-icon-sm')}
+          <span>Retry</span>
+        </button>
+      </div>
+    `;
+
+    const retryBtn = this.container.querySelector('#svx-reels-retry-btn');
+    retryBtn?.addEventListener('click', () => {
+      this.loadReels();
+    });
+  }
+}
+
 /* 11. SPA View Router */
 export class SVXRouter {
-  constructor(composerModal = null, authModal = null, profileController = null) {
+  constructor(composerModal = null, authModal = null, profileController = null, reelsController = null) {
     this.currentView = 'feed';
     this.composerModal = composerModal;
     this.authModal = authModal;
     this.profileController = profileController;
+    this.reelsController = reelsController;
     this.navItems = document.querySelectorAll('[data-nav-view]');
     this.viewSections = document.querySelectorAll('.svx-view-section');
     this.init();
@@ -2681,6 +3142,8 @@ export class SVXRouter {
             if (typeof this.onFeedRefresh === 'function') {
               this.onFeedRefresh();
             }
+          } else if (targetView === 'reels' && this.currentView === 'reels') {
+            this.reelsController?.loadReels();
           } else {
             this.switchView(targetView);
           }
@@ -2705,7 +3168,15 @@ export class SVXRouter {
   }
 
   switchView(viewName) {
+    const prevView = this.currentView;
     this.currentView = viewName;
+
+    // Handle Reels Audio Auto-Stop / Auto-Resume
+    if (prevView === 'reels' && viewName !== 'reels') {
+      this.reelsController?.pause();
+    } else if (viewName === 'reels') {
+      this.reelsController?.resume();
+    }
 
     this.navItems.forEach(item => {
       const match = item.getAttribute('data-nav-view') === viewName;
@@ -2788,7 +3259,24 @@ export function updateShayariInDOM(shayari) {
       // Cache updated object on DOM node
       card._shayari = { ...(card._shayari || {}), ...shayari };
     });
-    console.log(`[SVX] Synchronously updated shayari ${shayari.id} across ${cards.length} card(s)`);
+
+    const reelSlides = document.querySelectorAll(`.svx-reel-slide[data-shayari-id="${shayari.id}"]`);
+    reelSlides.forEach(slide => {
+      const textEl = slide.querySelector('.svx-shayari-text');
+      if (textEl) {
+        textEl.textContent = shayari.formatted || shayari.content;
+        const sizeClass = getAutoFitClass(shayari.content || '');
+        textEl.className = `svx-shayari-text font-${shayari.font_style || 'nastaliq'} ${sizeClass}`;
+      }
+      const card = slide.querySelector('.svx-reel-card');
+      if (card && shayari.mood_theme) {
+        card.setAttribute('data-mood', shayari.mood_theme);
+        card.className = `svx-reel-card mood-${shayari.mood_theme}`;
+      }
+      slide._shayari = { ...(slide._shayari || {}), ...shayari };
+    });
+
+    console.log(`[SVX] Synchronously updated shayari ${shayari.id} across ${cards.length} card(s) and ${reelSlides.length} reel slide(s)`);
   } catch (err) {
     console.error('[SVX] Error in updateShayariInDOM:', err);
   }
@@ -2950,6 +3438,9 @@ export function initUI() {
       document.querySelectorAll(`.svx-feed-card[data-shayari-id="${shayariId}"] .svx-comment-count`).forEach(el => {
         el.textContent = newCount;
       });
+      document.querySelectorAll(`.svx-reel-slide[data-shayari-id="${shayariId}"] [data-action="reel-comment"] .svx-reel-action-count`).forEach(el => {
+        el.textContent = newCount;
+      });
     }
   });
 
@@ -2958,6 +3449,7 @@ export function initUI() {
 
   // 5. Initialize Composer Modal
   let router = null;
+  let reelsController = null;
   const composerModal = new SVXComposerModal({
     onPostCreated: (newShayari, isUpdate) => {
       if (isUpdate) {
@@ -2965,6 +3457,9 @@ export function initUI() {
         showToast("Shayari updated successfully!", "Check");
       } else {
         feedController?.prependCard(newShayari);
+        if (reelsController && reelsController.hasLoaded) {
+          reelsController.reels.unshift(newShayari);
+        }
         router?.switchView('feed');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         showToast("Shayari published!", "Check");
@@ -3009,6 +3504,18 @@ export function initUI() {
     feedController.loadFeed();
   }
 
+  // 7b. Initialize Full-Screen Reels Controller
+  const reelsContainer = document.getElementById('svx-reels-feed');
+  if (reelsContainer) {
+    reelsController = new SVXReelsController({
+      container: reelsContainer,
+      commentModal,
+      shareEngine,
+      authModal,
+      getRouter: () => router
+    });
+  }
+
   // 8. Initialize Dual Viral Music Controller
   const musicController = new SVXMusicController({
     onTrackSelected: (track) => {
@@ -3020,7 +3527,7 @@ export function initUI() {
   });
 
   // 9. Initialize Router
-  router = new SVXRouter(composerModal, authModal, profileController);
+  router = new SVXRouter(composerModal, authModal, profileController, reelsController);
   if (feedController) {
     router.onFeedRefresh = () => feedController.refreshFeed();
   }
@@ -3046,6 +3553,7 @@ export function initUI() {
   return {
     router,
     feedController,
+    reelsController,
     composerModal,
     musicController,
     authModal,

@@ -3251,5 +3251,272 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   background: rgba(255, 193, 68, 0.3);
 }
 
+/* -------------------------------------------------------------------------- */
+/* 20. Immersive Full-Screen Poetry Reels Stream                              */
+/* -------------------------------------------------------------------------- */
+.svx-view-section.svx-reels-view {
+  padding: 0;
+  margin: -12px -16px 0 -16px;
+  height: calc(100vh - var(--svx-top-bar-height) - var(--svx-bottom-nav-height) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 36px);
+  height: calc(100dvh - var(--svx-top-bar-height) - var(--svx-bottom-nav-height) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 36px);
+  overflow: hidden;
+  position: relative;
+}
+
+.svx-reels-feed {
+  width: 100%;
+  height: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.svx-reels-feed::-webkit-scrollbar {
+  display: none;
+}
+
+.svx-reel-slide {
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 10px 14px;
+  box-sizing: border-box;
+}
+
+.svx-reel-card-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  height: 100%;
+  max-height: 92%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.svx-reel-card {
+  width: 100%;
+  height: 100%;
+  border-radius: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 18px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: rgba(14, 14, 26, 0.78);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.svx-reel-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.svx-reel-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.svx-reel-time {
+  font-size: 11px;
+  color: var(--svx-text-muted);
+}
+
+.svx-reel-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px 54px 16px 16px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.svx-reel-content::-webkit-scrollbar {
+  display: none;
+}
+
+.svx-reel-content .svx-shayari-text {
+  width: 100%;
+  margin: 0 auto;
+  line-height: 1.8;
+  word-break: break-word;
+}
+
+.svx-reel-footer {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.svx-reel-music-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: var(--svx-glass-radius-pill);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: 82%;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.svx-vinyl-disc {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c084fc;
+  transition: transform 0.3s ease;
+}
+
+.svx-vinyl-disc.spinning {
+  animation: svx-spin 2.8s linear infinite;
+}
+
+.svx-music-ticker {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.svx-music-ticker-text {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--svx-text-secondary);
+  animation: svx-marquee 12s linear infinite;
+}
+
+@keyframes svx-marquee {
+  0% { transform: translateX(0%); }
+  50% { transform: translateX(-40%); }
+  100% { transform: translateX(0%); }
+}
+
+.svx-music-soundwave {
+  display: flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 14px;
+}
+
+.svx-music-soundwave span {
+  width: 2.5px;
+  height: 4px;
+  background: #c084fc;
+  border-radius: 1px;
+  transition: height 0.2s ease;
+}
+
+.svx-music-soundwave.active span:nth-child(1) { animation: svx-wave 0.8s ease-in-out infinite 0.1s; }
+.svx-music-soundwave.active span:nth-child(2) { animation: svx-wave 0.8s ease-in-out infinite 0.3s; }
+.svx-music-soundwave.active span:nth-child(3) { animation: svx-wave 0.8s ease-in-out infinite 0.2s; }
+.svx-music-soundwave.active span:nth-child(4) { animation: svx-wave 0.8s ease-in-out infinite 0.4s; }
+
+@keyframes svx-wave {
+  0%, 100% { height: 4px; }
+  50% { height: 14px; }
+}
+
+/* Right Floating Action Stack (Reels Style) */
+.svx-reel-action-stack {
+  position: absolute;
+  right: 8px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  z-index: 10;
+}
+
+.svx-reel-action-btn {
+  background: rgba(14, 14, 26, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, border-color 0.2s ease;
+}
+
+.svx-reel-action-btn:active {
+  transform: scale(0.86);
+}
+
+.svx-reel-action-btn .svx-icon {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  transition: transform 0.2s ease, fill 0.2s ease, stroke 0.2s ease;
+}
+
+.svx-reel-action-count {
+  position: absolute;
+  bottom: -15px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--svx-text-secondary);
+  white-space: nowrap;
+}
+
+.svx-reel-action-btn.liked {
+  color: #ff4081;
+  border-color: rgba(255, 64, 129, 0.45);
+  background: rgba(255, 64, 129, 0.15);
+}
+
+.svx-reel-action-btn.liked .svx-icon {
+  fill: #ff4081;
+  stroke: #ff4081;
+}
+
+.svx-reel-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  margin: auto;
+}
+
 
 

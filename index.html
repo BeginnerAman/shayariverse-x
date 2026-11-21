@@ -88,6 +88,13 @@
       <!-- 0ms Synchronous Feed Stream Populated via ui.js -->
     </section>
 
+    <!-- View: Reels (Poetry Stream) -->
+    <section id="svx-view-reels" class="svx-view-section svx-reels-view" aria-label="Poetry Reels Stream">
+      <div id="svx-reels-feed" class="svx-reels-feed" role="feed" aria-label="Poetry Stream">
+        <!-- Full-Screen Snapping Slides Populated via ui.js -->
+      </div>
+    </section>
+
     <!-- View: Create Composer -->
     <section id="svx-view-create" class="svx-view-section" aria-label="Create Shayari">
       <div class="svx-glass-card mood-purple" style="text-align: center; padding: 48px 20px; margin-top: 16px;">
@@ -233,6 +240,14 @@
       <button class="svx-nav-item active" data-nav-view="feed" aria-label="Feed">
         <svg class="svx-icon" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         <span>Feed</span>
+      </button>
+
+      <!-- Reels Tab -->
+      <button class="svx-nav-item" data-nav-view="reels" aria-label="Reels">
+        <svg class="svx-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="20" height="15" x="2" y="4.5" rx="3"/><polygon points="10 8.5 15 12 10 15.5" fill="currentColor"/>
+        </svg>
+        <span>Reels</span>
       </button>
 
       <!-- Create Tab (Elevated Circle) -->
