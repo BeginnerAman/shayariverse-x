@@ -426,20 +426,24 @@ export class SVXComposerModal {
 
     // Current user session check
     let currentUser = db.getCurrentUser();
-    if (!currentUser) {
-      // Default to Founder @aman for immediate testability if no user session
-      currentUser = await db.getUserByHandle('aman');
-      if (currentUser) {
-        db.setCurrentUser(currentUser);
-      } else {
-        currentUser = {
-          id: 'guest-shayar-001',
-          handle: 'shayar',
-          display_name: 'Shayar',
-          is_verified: false,
-          is_admin: false
-        };
-        db.setCurrentUser(currentUser);
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!currentUser || !currentUser.id || !uuidRegex.test(currentUser.id)) {
+      if (currentUser?.handle && db.isLiveMode()) {
+        try {
+          const liveUser = await db.getUserByHandle(currentUser.handle);
+          if (liveUser && liveUser.id && uuidRegex.test(liveUser.id)) {
+            currentUser = liveUser;
+            db.setCurrentUser(liveUser);
+          }
+        } catch {}
+      }
+      if (!currentUser || !currentUser.id || !uuidRegex.test(currentUser.id)) {
+        // Fall back to Founder @aman for valid cloud UUID
+        const founder = await db.getUserByHandle('aman');
+        if (founder && founder.id && uuidRegex.test(founder.id)) {
+          currentUser = founder;
+          db.setCurrentUser(founder);
+        }
       }
     }
 

@@ -1031,6 +1031,33 @@ export class UnifiedDB {
     return this.isLiveMode() ? this.supabase : this.local;
   }
 
+  async autoRepairSession() {
+    if (!this.isLiveMode()) return null;
+    try {
+      const currentUser = this.getCurrentUser();
+      if (!currentUser || !currentUser.handle || currentUser.handle === 'guest') return null;
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(currentUser.id)) {
+        console.log('[SVX DB] Detected non-UUID session, repairing with live cloud account:', currentUser.handle);
+        const liveUser = await this.supabase.getUserByHandle(currentUser.handle);
+        if (liveUser && liveUser.id && uuidRegex.test(liveUser.id)) {
+          this.setCurrentUser(liveUser);
+          console.log('[SVX DB] Session auto-repaired successfully to live UUID:', liveUser.id);
+          return liveUser;
+        } else {
+          this.logout();
+          console.log('[SVX DB] Cleared unresolvable ghost session.');
+          return null;
+        }
+      }
+      return currentUser;
+    } catch (err) {
+      console.warn('[SVX DB] Session auto-repair check error:', err);
+      return null;
+    }
+  }
+
   init() {
     if (this.isLiveMode()) {
       try {
@@ -1068,12 +1095,20 @@ export class UnifiedDB {
   }
 
   async createUser(handle, displayName, pinHash) {
-    try {
-      if (this.isLiveMode()) {
+    if (this.isLiveMode()) {
+      try {
         return await this.supabase.createUser(handle, displayName, pinHash);
+      } catch (err) {
+        const msg = (err?.message || '').toLowerCase();
+        if (msg.includes('available') || msg.includes('taken') || msg.includes('reserved') || msg.includes('invalid') || msg.includes('duplicate')) {
+          throw err;
+        }
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          console.warn('[SVX DB] Offline detected, using local createUser fallback');
+          return await this.local.createUser(handle, displayName, pinHash);
+        }
+        throw err;
       }
-    } catch (err) {
-      console.warn('[SVX DB] Live createUser failed, trying local fallback:', err);
     }
     return await this.local.createUser(handle, displayName, pinHash);
   }

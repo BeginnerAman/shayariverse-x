@@ -1531,9 +1531,46 @@ export class SVXAuthModal {
           return;
         }
 
+        // SMART AUTO-LOGIN CHECK:
+        // If handle is already registered, check if the entered PIN matches the existing account
+        const check = await db.isHandleAvailable(handle);
+        if (!check.available) {
+          const existingUser = await db.verifyPin(handle, pinHash);
+          if (existingUser) {
+            console.log('[SVX Auth] Smart Auto-Login successful for existing handle:', existingUser);
+            this.close();
+            showToast(`Welcome back, @${existingUser.handle}! Logged in.`, "Check");
+            if (this.onAuthSuccess) this.onAuthSuccess(existingUser);
+            if (this.pendingAction) {
+              const action = this.pendingAction;
+              this.pendingAction = null;
+              action(existingUser);
+            }
+            return;
+          } else {
+            const shouldSwitch = await SVXDialog.confirm({
+              title: "Handle Already Registered",
+              message: `@${handle} is already registered. If this is your Shayar ID, switch to login and enter your correct PIN.`,
+              confirmText: "Switch to Login",
+              cancelText: "Change Handle",
+              isDanger: false
+            });
+            if (shouldSwitch) {
+              this.switchMode('login');
+              if (this.handleInput) this.handleInput.value = handle;
+              if (this.pinInput) this.pinInput.value = '';
+              this.pinInput?.focus();
+            } else {
+              this.handleInput?.focus();
+            }
+            return;
+          }
+        }
+
         const newUser = await db.createUser(handle, displayName, pinHash);
         console.log('[SVX Auth] User registered successfully:', newUser);
         this.close();
+        showToast(`Welcome to ShayariVerse X, @${newUser.handle}!`, "Check");
         if (this.onAuthSuccess) this.onAuthSuccess(newUser);
 
         if (this.pendingAction) {
@@ -2298,7 +2335,19 @@ export class SVXProfileController {
     // Otherwise render Own / Logged-in Profile
     this.viewingHandle = null;
 
-    if (!currentUser || currentUser.handle === 'guest') {
+    let user = currentUser;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (user && user.handle && user.handle !== 'guest' && !uuidRegex.test(user.id) && db.isLiveMode()) {
+      try {
+        const liveUser = await db.getUserByHandle(user.handle);
+        if (liveUser && liveUser.id && uuidRegex.test(liveUser.id)) {
+          user = liveUser;
+          db.setCurrentUser(liveUser);
+        }
+      } catch {}
+    }
+
+    if (!user || user.handle === 'guest') {
       this.container.innerHTML = `
         <div class="svx-glass-card mood-purple svx-profile-card">
           <div class="svx-profile-avatar-lg" aria-hidden="true">
@@ -2328,9 +2377,9 @@ export class SVXProfileController {
     }
 
     // Authenticated user profile
-    const userShayaris = await db.getShayarisByUser(currentUser.id);
+    const userShayaris = await db.getShayarisByUser(user.id);
     const totalLikes = userShayaris.reduce((acc, s) => acc + (s.likes_count || 0), 0);
-    const initials = (currentUser.display_name || 'U').slice(0, 2).toUpperCase();
+    const initials = (user.display_name || 'U').slice(0, 2).toUpperCase();
 
     this.container.innerHTML = `
       <div class="svx-profile-wrapper">
@@ -2339,10 +2388,10 @@ export class SVXProfileController {
           
           <div>
             <div class="svx-author-name-row" style="justify-content: center; gap: 6px;">
-              <h2 class="svx-author-name" style="font-size: 20px;">${escapeHtml(currentUser.display_name)}</h2>
-              ${currentUser.is_verified ? renderIcon('BadgeCheck') : ''}
+              <h2 class="svx-author-name" style="font-size: 20px;">${escapeHtml(user.display_name)}</h2>
+              ${user.is_verified ? renderIcon('BadgeCheck') : ''}
             </div>
-            <span class="svx-author-handle">@${currentUser.handle}</span>
+            <span class="svx-author-handle">@${user.handle}</span>
           </div>
 
           ${isGodMode ? `
@@ -2355,7 +2404,7 @@ export class SVXProfileController {
           ` : ''}
 
           <p class="svx-placeholder-desc" style="margin: 0 auto; font-style: italic;">
-            ${escapeHtml(currentUser.bio || "Words meet music in ShayariVerse X.")}
+            ${escapeHtml(user.bio || "Words meet music in ShayariVerse X.")}
           </p>
 
           <div class="svx-profile-actions-row">
@@ -2868,6 +2917,14 @@ export function initBackNavigation({ authModal, commentModal, composerModal, edi
 /* 12. Initialize Shell UI */
 export function initUI() {
   console.log(`[SVX] Initializing ${CONFIG.APP_NAME} (${CONFIG.APP_SHORT}) v${CONFIG.VERSION}`);
+
+  // Auto-repair any stale or non-UUID legacy sessions
+  db.autoRepairSession?.().then(repaired => {
+    if (repaired) {
+      console.log('[SVX] Session validated with live cloud ID:', repaired.id);
+      profileController?.render();
+    }
+  }).catch(() => {});
 
   // 1. Initialize Auth Modal
   const authModal = new SVXAuthModal({
