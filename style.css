@@ -3350,7 +3350,7 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   color: var(--svx-text-muted);
 }
 
-/* 100% Balanced Centered Typography with Elegant Quote Accents */
+/* 100% Balanced Centered Typography with Elegant Quote Accents (Unobstructed Full Width) */
 .svx-reel-content {
   flex: 1;
   min-height: 0;
@@ -3359,28 +3359,30 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   justify-content: center;
   align-items: center;
   text-align: center;
-  padding: 8px 24px;
+  padding: 8px 16px;
   overflow: hidden;
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .svx-reel-content .svx-quote-mark {
   width: 100%;
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.2);
   font-family: var(--svx-font-display);
   pointer-events: none;
 }
 
 .svx-reel-content .svx-quote-open {
   text-align: left;
-  margin-bottom: -4px;
+  margin-bottom: -2px;
 }
 
 .svx-reel-content .svx-quote-close {
   text-align: right;
-  margin-top: -4px;
+  margin-top: -2px;
 }
 
 .svx-reel-content .svx-shayari-text {
@@ -3391,52 +3393,58 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   text-align: center;
   color: var(--svx-text-primary);
   letter-spacing: 0.015em;
-  padding: 4px 8px;
+  padding: 4px 6px;
 }
 
-/* Harmonious Multi-Tier Font Sizing */
+/* Responsive, Harmonious Font Sizing via Clamp (Never Overflows, Zero Layout Thrash) */
 .svx-reel-content .svx-shayari-text.size-short {
-  font-size: 21px;
-  line-height: 1.62;
+  font-size: clamp(18px, 4.8vw, 21px);
+  line-height: 1.6;
   font-weight: 600;
 }
 
 .svx-reel-content .svx-shayari-text.size-medium {
-  font-size: 18px;
-  line-height: 1.58;
+  font-size: clamp(15px, 3.8vw, 17.5px);
+  line-height: 1.54;
   font-weight: 500;
 }
 
 .svx-reel-content .svx-shayari-text.size-long {
-  font-size: 15.5px;
-  line-height: 1.52;
+  font-size: clamp(12.5px, 3.2vw, 14.5px);
+  line-height: 1.48;
   font-weight: 500;
 }
 
 .svx-reel-footer {
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* Static, Professional 2-Line Audio Pill (No Marquee Shaking) */
+/* Elongated Audio Pill on the Left */
 .svx-reel-music-pill {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 14px;
+  gap: 8px;
+  padding: 0 12px;
   border-radius: var(--svx-glass-radius-pill);
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  max-width: 80%;
   overflow: hidden;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
   user-select: none;
   -webkit-user-select: none;
+  box-sizing: border-box;
 }
 
 .svx-reel-music-pill:active {
@@ -3445,13 +3453,13 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
 }
 
 .svx-reel-music-pill.muted {
-  opacity: 0.65;
+  opacity: 0.6;
   border-color: rgba(255, 255, 255, 0.06);
 }
 
 .svx-vinyl-disc {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3468,117 +3476,97 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   min-width: 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 1px;
   text-align: left;
   overflow: hidden;
 }
 
 .svx-reel-song-title {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--svx-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
+  line-height: 1.2;
 }
 
 .svx-reel-song-artist {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 400;
   color: var(--svx-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
+  line-height: 1.2;
 }
 
-.svx-music-soundwave {
+/* 3 Equal Action Buttons on the Right (Like, Comment, Share) */
+.svx-reel-action-group {
   display: flex;
-  align-items: flex-end;
-  gap: 2.5px;
-  height: 14px;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
 }
 
-.svx-music-soundwave span {
-  width: 2.5px;
-  height: 4px;
-  background: #c084fc;
-  border-radius: 1px;
-  transition: height 0.2s ease;
-}
-
-.svx-music-soundwave.active span:nth-child(1) { animation: svx-wave 0.8s ease-in-out infinite 0.1s; }
-.svx-music-soundwave.active span:nth-child(2) { animation: svx-wave 0.8s ease-in-out infinite 0.3s; }
-.svx-music-soundwave.active span:nth-child(3) { animation: svx-wave 0.8s ease-in-out infinite 0.2s; }
-.svx-music-soundwave.active span:nth-child(4) { animation: svx-wave 0.8s ease-in-out infinite 0.4s; }
-
-@keyframes svx-wave {
-  0%, 100% { height: 4px; }
-  50% { height: 14px; }
-}
-
-/* Streamlined Right Floating Action Stack: Elevated Above Bottom Music Bar */
-.svx-reel-action-stack {
-  position: absolute;
-  right: 12px;
-  bottom: 80px; /* Positioned clearly above bottom music bar */
+.svx-reel-bar-btn {
+  height: 38px;
+  min-width: 42px;
+  padding: 0 10px;
+  border-radius: var(--svx-glass-radius-pill);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  z-index: 10;
-}
-
-.svx-reel-action-btn {
-  background: rgba(18, 18, 32, 0.84);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-  border-radius: 50%;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  gap: 5px;
+  color: var(--svx-text-primary);
+  font-size: 11.5px;
+  font-weight: 600;
   cursor: pointer;
   outline: none;
-  position: relative;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease, border-color 0.15s ease;
-  will-change: transform;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  box-sizing: border-box;
 }
 
-.svx-reel-action-btn:active {
-  transform: scale(0.86);
+.svx-reel-bar-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.14);
 }
 
-.svx-reel-action-btn .svx-icon {
-  width: 20px;
-  height: 20px;
+.svx-reel-bar-btn .svx-icon {
+  width: 17px;
+  height: 17px;
   stroke: currentColor;
-  transition: transform 0.15s ease, fill 0.15s ease, stroke 0.15s ease;
+  flex-shrink: 0;
+  transition: fill 0.15s ease, stroke 0.15s ease;
 }
 
 .svx-reel-action-count {
-  position: absolute;
-  bottom: -15px;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--svx-text-secondary);
+  color: var(--svx-text-primary);
   white-space: nowrap;
 }
 
-.svx-reel-action-btn.liked {
+.svx-reel-bar-btn.liked {
   color: #ff4081;
-  border-color: rgba(255, 64, 129, 0.45);
   background: rgba(255, 64, 129, 0.18);
+  border-color: rgba(255, 64, 129, 0.45);
 }
 
-.svx-reel-action-btn.liked .svx-icon {
+.svx-reel-bar-btn.liked .svx-icon {
   fill: #ff4081;
   stroke: #ff4081;
+}
+
+.svx-reel-bar-btn.liked .svx-reel-action-count {
+  color: #ff4081;
 }
 
 .svx-reel-empty-state {

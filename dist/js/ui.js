@@ -2709,10 +2709,9 @@ export class SVXReelsController {
     this.observer = null;
     this.hasLoaded = false;
     this.isLoading = false;
-    this.isTransitioning = false;
+    this._audioPlayTimeout = null;
 
     this.setupObserver();
-    this.setupGestureController();
   }
 
   setupObserver() {
@@ -2730,58 +2729,6 @@ export class SVXReelsController {
       root: this.container,
       threshold: 0.65
     });
-  }
-
-  setupGestureController() {
-    let startY = 0;
-    let startX = 0;
-    let isTracking = false;
-
-    this.container.addEventListener('touchstart', (e) => {
-      if (this.isTransitioning || e.touches.length !== 1) return;
-      startY = e.touches[0].clientY;
-      startX = e.touches[0].clientX;
-      isTracking = true;
-    }, { passive: true });
-
-    this.container.addEventListener('touchend', (e) => {
-      if (!isTracking || this.isTransitioning) return;
-      isTracking = false;
-
-      const endY = e.changedTouches[0].clientY;
-      const endX = e.changedTouches[0].clientX;
-      const deltaY = endY - startY;
-      const deltaX = endX - startX;
-
-      // Strictly 1 reel per swipe: detect clean vertical flick
-      if (Math.abs(deltaY) > 35 && Math.abs(deltaY) > Math.abs(deltaX)) {
-        if (deltaY < 0 && this.currentIndex < this.reels.length - 1) {
-          // Swipe up -> Strictly 1 next reel
-          this.goToSlide(this.currentIndex + 1);
-        } else if (deltaY > 0 && this.currentIndex > 0) {
-          // Swipe down -> Strictly 1 previous reel
-          this.goToSlide(this.currentIndex - 1);
-        } else {
-          this.goToSlide(this.currentIndex);
-        }
-      }
-    }, { passive: true });
-  }
-
-  goToSlide(index) {
-    const slides = this.container.querySelectorAll('.svx-reel-slide');
-    if (!slides[index]) return;
-
-    this.currentIndex = index;
-    const targetSlide = slides[index];
-
-    this.isTransitioning = true;
-    targetSlide.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    setTimeout(() => {
-      this.isTransitioning = false;
-      this.onSlideActive(targetSlide);
-    }, 320);
   }
 
   async loadReels() {
@@ -2890,14 +2837,14 @@ export class SVXReelsController {
             ${shayari.category ? `<span class="svx-badge" style="font-size: 10px; padding: 3px 8px;">${escapeHtml(shayari.category)}</span>` : ''}
           </div>
 
-          <!-- Body: Dynamic Poetic Typography with Feed-Grade Quotation Styling -->
+          <!-- Body: Dynamic Poetic Typography with Feed-Grade Quotation Styling (100% Unobstructed Width) -->
           <div class="svx-reel-content">
             <div class="svx-quote-mark svx-quote-open">&ldquo;</div>
             <div class="svx-shayari-text ${fontClass} ${sizeClass}"></div>
             <div class="svx-quote-mark svx-quote-close">&rdquo;</div>
           </div>
 
-          <!-- Footer: Viral Background Music Pill & Soundwave (Click to Pause/Play) -->
+          <!-- Footer: Elongated Audio Pill on Left + 3 Equal Action Buttons on Right -->
           <div class="svx-reel-footer">
             ${hasSong ? `
               <div class="svx-reel-music-pill ${this.isMuted ? 'muted' : ''}" data-action="reel-music-pill" title="Tap to pause/play audio">
@@ -2907,9 +2854,6 @@ export class SVXReelsController {
                 <div class="svx-reel-music-meta">
                   <span class="svx-reel-song-title">${escapeHtml(songTitle)}</span>
                   <span class="svx-reel-song-artist">${escapeHtml(songArtist)}</span>
-                </div>
-                <div class="svx-music-soundwave" aria-hidden="true">
-                  <span></span><span></span><span></span><span></span>
                 </div>
               </div>
             ` : `
@@ -2921,29 +2865,27 @@ export class SVXReelsController {
                 </div>
               </div>
             `}
+
+            <div class="svx-reel-action-group" aria-label="Reel Actions">
+              <!-- Like Button -->
+              <button class="svx-reel-bar-btn ${isLiked ? 'liked' : ''}" data-action="reel-like" aria-label="Like Shayari">
+                ${renderIcon(isLiked ? 'HeartFilled' : 'Heart')}
+                <span class="svx-reel-action-count">${shayari.likes_count || 0}</span>
+              </button>
+
+              <!-- Comment Button -->
+              <button class="svx-reel-bar-btn" data-action="reel-comment" aria-label="Open Comments">
+                ${renderIcon('MessageCircle')}
+                <span class="svx-reel-action-count">${shayari.comments_count || 0}</span>
+              </button>
+
+              <!-- Share Button -->
+              <button class="svx-reel-bar-btn" data-action="reel-share" aria-label="Share Quote Card">
+                ${renderIcon('Share2')}
+              </button>
+            </div>
           </div>
         </article>
-
-        <!-- Right Floating Action Stack: Elevated Above Bottom Music Bar -->
-        <aside class="svx-reel-action-stack" aria-label="Reel Actions">
-          <!-- Like Button -->
-          <button class="svx-reel-action-btn ${isLiked ? 'liked' : ''}" data-action="reel-like" aria-label="Like Shayari">
-            ${renderIcon(isLiked ? 'HeartFilled' : 'Heart')}
-            <span class="svx-reel-action-count">${shayari.likes_count || 0}</span>
-          </button>
-
-          <!-- Comment Drawer Button -->
-          <button class="svx-reel-action-btn" data-action="reel-comment" aria-label="Open Comments">
-            ${renderIcon('MessageCircle')}
-            <span class="svx-reel-action-count">${shayari.comments_count || 0}</span>
-          </button>
-
-          <!-- Share Button -->
-          <button class="svx-reel-action-btn" data-action="reel-share" aria-label="Share Quote Card">
-            ${renderIcon('Share2')}
-            <span class="svx-reel-action-count">Share</span>
-          </button>
-        </aside>
       </div>
     `;
 
@@ -2963,7 +2905,7 @@ export class SVXReelsController {
     let lastTap = 0;
     if (card) {
       card.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('button, a, .svx-author-group, .svx-reel-music-pill')) return;
+        if (e.target.closest('button, a, .svx-author-group, .svx-reel-music-pill, .svx-reel-bar-btn')) return;
         const now = Date.now();
         if (now - lastTap < 320) {
           triggerHeartBurst(card, shayari.id);
@@ -3082,48 +3024,37 @@ export class SVXReelsController {
     // Reset visualizer animations on all other slides
     this.container.querySelectorAll('.svx-reel-slide').forEach(s => s.classList.remove('active-slide'));
     this.container.querySelectorAll('.svx-vinyl-disc').forEach(el => el.classList.remove('spinning'));
-    this.container.querySelectorAll('.svx-music-soundwave').forEach(el => el.classList.remove('active'));
 
     slide.classList.add('active-slide');
-    const vinyl = slide.querySelector('.svx-vinyl-disc');
-    const soundwave = slide.querySelector('.svx-music-soundwave');
-    const musicPill = slide.querySelector('.svx-reel-music-pill');
 
-    // Dynamic text fitting guard: guarantees zero overflow, zero clipping, zero scroll
-    const textEl = slide.querySelector('.svx-shayari-text');
-    const contentEl = slide.querySelector('.svx-reel-content');
-    if (textEl && contentEl && contentEl.clientHeight > 0) {
-      let currentSize = parseFloat(window.getComputedStyle(textEl).fontSize) || 16;
-      let attempts = 0;
-      while (textEl.scrollHeight > contentEl.clientHeight && currentSize > 11 && attempts < 20) {
-        currentSize -= 0.5;
-        textEl.style.fontSize = `${currentSize}px`;
-        textEl.style.lineHeight = '1.38';
-        attempts++;
+    // Debounce audio playback slightly so smooth scroll settling is instantaneous and fluid
+    clearTimeout(this._audioPlayTimeout);
+    this._audioPlayTimeout = setTimeout(() => {
+      if (this.activeSlide !== slide) return;
+      const vinyl = slide.querySelector('.svx-vinyl-disc');
+      const musicPill = slide.querySelector('.svx-reel-music-pill');
+
+      if (shayari.song_url && !this.isMuted) {
+        vinyl?.classList.add('spinning');
+        musicPill?.classList.remove('muted');
+
+        audioEngine.play(shayari.song_url, {
+          name: shayari.song_name || 'Shayari BGM',
+          artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
+        }).catch(err => {
+          console.warn('[SVX Reels] Autoplay blocked by browser policy:', err);
+        });
+      } else {
+        musicPill?.classList.toggle('muted', this.isMuted);
+        audioEngine.pause();
       }
-    }
-
-    if (shayari.song_url && !this.isMuted) {
-      vinyl?.classList.add('spinning');
-      soundwave?.classList.add('active');
-      musicPill?.classList.remove('muted');
-
-      audioEngine.play(shayari.song_url, {
-        name: shayari.song_name || 'Shayari BGM',
-        artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
-      }).catch(err => {
-        console.warn('[SVX Reels] Autoplay blocked by browser policy:', err);
-      });
-    } else {
-      musicPill?.classList.toggle('muted', this.isMuted);
-      audioEngine.pause();
-    }
+    }, 120);
   }
 
   pause() {
+    clearTimeout(this._audioPlayTimeout);
     audioEngine.pause();
     this.container.querySelectorAll('.svx-vinyl-disc').forEach(el => el.classList.remove('spinning'));
-    this.container.querySelectorAll('.svx-music-soundwave').forEach(el => el.classList.remove('active'));
   }
 
   resume() {
@@ -3136,9 +3067,7 @@ export class SVXReelsController {
       const shayari = this.activeSlide._shayari;
       if (shayari?.song_url) {
         const vinyl = this.activeSlide.querySelector('.svx-vinyl-disc');
-        const soundwave = this.activeSlide.querySelector('.svx-music-soundwave');
         vinyl?.classList.add('spinning');
-        soundwave?.classList.add('active');
 
         audioEngine.play(shayari.song_url, {
           name: shayari.song_name || 'Shayari BGM',
@@ -3155,14 +3084,11 @@ export class SVXReelsController {
 
     if (this.activeSlide) {
       const vinyl = this.activeSlide.querySelector('.svx-vinyl-disc');
-      const soundwave = this.activeSlide.querySelector('.svx-music-soundwave');
 
       if (this.isMuted) {
         vinyl?.classList.remove('spinning');
-        soundwave?.classList.remove('active');
       } else if (this.activeSlide._shayari?.song_url) {
         vinyl?.classList.add('spinning');
-        soundwave?.classList.add('active');
       }
     }
   }
