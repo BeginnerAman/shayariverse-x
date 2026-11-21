@@ -348,7 +348,9 @@ export class SVXFeedController {
     const ptr = document.getElementById('svx-pull-to-refresh');
     if (!ptr) return;
 
-    const icon = ptr.querySelector('.svx-ptr-icon');
+    const arc = ptr.querySelector('.svx-ptr-arc');
+    const arrowHead = ptr.querySelector('.svx-ptr-arrow-head');
+    const CIRCUMFERENCE = 51.52; // 2 * Math.PI * 8.2
 
     let startY = 0;
     let startX = 0;
@@ -373,7 +375,13 @@ export class SVXFeedController {
       ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready', 'svx-ptr-visible');
       ptr.style.transform = '';
       ptr.style.opacity = '';
-      if (icon) icon.style.transform = '';
+      if (arc) {
+        arc.style.strokeDashoffset = `${CIRCUMFERENCE}`;
+      }
+      if (arrowHead) {
+        arrowHead.style.transform = 'rotate(0deg)';
+        arrowHead.style.opacity = '0';
+      }
     };
 
     window.addEventListener('touchstart', (e) => {
@@ -462,10 +470,18 @@ export class SVXFeedController {
       ptr.style.transform = `translate(-50%, ${translateY}px) scale(${scale})`;
       ptr.style.opacity = Math.min(1, pullDistance / 24);
 
-      // Smooth arrow rotation with finger pull (0 to 360 deg)
-      const rotation = Math.min(360, (pullDistance / PULL_THRESHOLD) * 360);
-      if (icon) {
-        icon.style.transform = `rotate(${rotation}deg)`;
+      // REAL-TIME PROGRESSIVE ARC FILL (Instagram Style)
+      const progress = Math.min(1, pullDistance / PULL_THRESHOLD);
+      const sweepAngle = progress * 280; // Sweeps up to 280 degrees at 100% threshold
+      const arcLength = (sweepAngle / 360) * CIRCUMFERENCE;
+      const dashoffset = Math.max(0, CIRCUMFERENCE - arcLength);
+
+      if (arc) {
+        arc.style.strokeDashoffset = `${dashoffset}`;
+      }
+      if (arrowHead) {
+        arrowHead.style.transform = `rotate(${sweepAngle}deg)`;
+        arrowHead.style.opacity = `${Math.min(1, progress * 3)}`;
       }
 
       if (pullDistance >= PULL_THRESHOLD) {
@@ -513,14 +529,14 @@ export class SVXFeedController {
 
     const ptr = document.getElementById('svx-pull-to-refresh');
     const iconWrap = ptr?.querySelector('.svx-ptr-icon-wrap');
+    const arrowHead = ptr?.querySelector('.svx-ptr-arrow-head');
 
     if (ptr) {
       ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready');
       ptr.classList.add('svx-ptr-refreshing', 'svx-ptr-visible');
       ptr.style.transform = 'translate(-50%, 14px) scale(1)';
       ptr.style.opacity = '1';
-      const icon = ptr.querySelector('.svx-ptr-icon');
-      if (icon) icon.style.transform = '';
+      if (arrowHead) arrowHead.style.opacity = '0';
     }
 
     const startTime = Date.now();
@@ -568,11 +584,12 @@ export class SVXFeedController {
           ptr.style.opacity = '';
           if (iconWrap) {
             iconWrap.innerHTML = `
-              <svg class="svx-icon svx-ptr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                <path d="M3 3v5h5"/>
-                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
-                <path d="M16 21h5v-5"/>
+              <svg class="svx-ptr-svg" viewBox="0 0 24 24" fill="none">
+                <circle class="svx-ptr-track" cx="12" cy="12" r="8.2" />
+                <circle class="svx-ptr-arc" cx="12" cy="12" r="8.2" stroke-dasharray="51.52" stroke-dashoffset="51.52" transform="rotate(-90 12 12)" />
+                <g class="svx-ptr-arrow-head" style="opacity: 0; transform-origin: 12px 12px;">
+                  <polyline points="11.5,1.8 14,3.8 11.5,5.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                </g>
               </svg>
             `;
           }

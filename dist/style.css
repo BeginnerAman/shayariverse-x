@@ -2784,10 +2784,34 @@ textarea,
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   color: #c084fc;
   transition: color 0.2s ease;
+}
+
+.svx-ptr-svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  overflow: visible;
+}
+
+.svx-ptr-track {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 2.2;
+}
+
+.svx-ptr-arc {
+  stroke: #c084fc;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  transition: stroke 0.2s ease;
+}
+
+.svx-ptr-arrow-head {
+  color: #c084fc;
+  transition: opacity 0.15s ease, color 0.2s ease;
 }
 
 .svx-ptr-icon {
@@ -2803,7 +2827,9 @@ textarea,
   transform: scale(1.08);
 }
 
-.svx-pull-to-refresh.svx-ptr-ready .svx-ptr-icon-wrap {
+.svx-pull-to-refresh.svx-ptr-ready .svx-ptr-arc,
+.svx-pull-to-refresh.svx-ptr-ready .svx-ptr-arrow-head {
+  stroke: #38bdf8;
   color: #38bdf8;
 }
 
@@ -2813,9 +2839,18 @@ textarea,
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.35);
 }
 
-.svx-pull-to-refresh.svx-ptr-refreshing .svx-ptr-icon {
-  animation: svx-spin 0.72s linear infinite;
-  color: #38bdf8;
+.svx-pull-to-refresh.svx-ptr-refreshing .svx-ptr-svg {
+  animation: svx-spin 0.75s linear infinite;
+}
+
+.svx-pull-to-refresh.svx-ptr-refreshing .svx-ptr-arc {
+  stroke: #38bdf8;
+  stroke-dasharray: 38 14 !important;
+  stroke-dashoffset: 0 !important;
+}
+
+.svx-pull-to-refresh.svx-ptr-refreshing .svx-ptr-arrow-head {
+  opacity: 0 !important;
 }
 
 /* Success flash state */
