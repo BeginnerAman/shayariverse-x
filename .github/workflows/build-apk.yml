@@ -81,11 +81,13 @@ jobs:
           gh release create ${{ env.APP_TAG }} build-artifacts/ShayariVerse-X-${{ env.APP_TAG }}.apk build-artifacts/ShayariVerse-X-Latest.apk \
             --title "ShayariVerse X ${{ env.APP_TAG }}" \
             --notes "### ShayariVerse X ${{ env.APP_TAG }} Release Notes
-          - **Reverted to Proven v1.3.5 Architecture**: Restored clean, rock-solid pull-to-refresh architecture from v1.3.5 with resting-at-top guard.
+          - **Infinite Repeatable Pull-To-Refresh**: Fixed scope reference error in refresh cycle cleanup, ensuring the refresh lock reliably releases after every pull for seamless repeated use.
           - **Persistent Signing Keystore (Zero Installation Errors)**: Enforced persistent keystore directly in Gradle to eliminate signature mismatch across CI builds.
-          - **Instagram-Style Pull-to-Refresh with Resting-at-Top Guard**: Pull gesture strictly activates only when the touch originates while stationary at the top; scrolling up from lower feed posts never triggers accidental refreshes.
-          - **Minimalist Circular Liquid Glass Indicator**: Compact circular glass indicator with a rotating arrow that seamlessly spins upon release, completely eliminating text wrapping.
-          - **High Intentionality Rubber-Band Physics**: Damped touch curve and deadband threshold ensure that subtle swipes and fast scrolls remain unaffected.
+          - **Permanent Dynamic Arc (Subsequent Pulls Fixed)**: Zero-DOM-destruction architecture ensures the progressive SVG arc and leading arrowhead persist permanently across all repeated refreshes without getting detached or frozen.
+          - **Instagram-Style Dynamic Progressive Arc-Fill**: Circular neon ring progressively fills in real-time proportional to finger pull distance, exactly like Instagram and native Android SwipeRefreshLayout.
+          - **Directional Leading Arrowhead**: Fluid arrowhead leads the stroke as the circle draws, seamlessly morphing into an infinite liquid glass spinner on release.
+          - **Strict Resting-at-Top Guard**: Pull gesture activates exclusively when the touch begins while stationary at the top; scrolling up never triggers accidental refreshes.
+          - **Minimalist Liquid Glass Disc**: Ultra-clean 42px circular badge with zero text-wrapping issues across any Android screen size.
           - **Dual Refresh Capabilities**: Pull down at the top of the feed or tap the active Feed navigation icon to refresh content at any time.
           - **Interactive Notification Controls & Custom Cover Art**: Lock screen and notification media controls with glowing ShayariVerse X star artwork.
           - **Silent Continuous Background Audio**: Persistent Android 14 mediaPlayback Foreground Service with zero interruption.
