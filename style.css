@@ -2781,6 +2781,7 @@ textarea,
 }
 
 .svx-ptr-icon-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2795,6 +2796,18 @@ textarea,
   height: 22px;
   display: block;
   overflow: visible;
+}
+
+.svx-ptr-spinner-icon {
+  display: block;
+}
+
+.svx-ptr-check-icon {
+  display: none;
+  width: 20px;
+  height: 20px;
+  color: #34d399;
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.5));
 }
 
 .svx-ptr-track {
@@ -2839,7 +2852,7 @@ textarea,
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.35);
 }
 
-.svx-pull-to-refresh.svx-ptr-refreshing .svx-ptr-svg {
+.svx-pull-to-refresh.svx-ptr-refreshing .svx-ptr-spinner-icon {
   animation: svx-spin 0.75s linear infinite;
 }
 
@@ -2861,6 +2874,15 @@ textarea,
 
 .svx-pull-to-refresh.svx-ptr-success .svx-ptr-icon-wrap {
   color: #34d399;
+}
+
+.svx-pull-to-refresh.svx-ptr-success .svx-ptr-spinner-icon {
+  display: none !important;
+}
+
+.svx-pull-to-refresh.svx-ptr-success .svx-ptr-check-icon {
+  display: block !important;
+  animation: svx-fade-in 0.2s ease-out;
 }
 
 /* Global Toast Notice */

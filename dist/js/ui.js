@@ -372,7 +372,7 @@ export class SVXFeedController {
     const resetPTR = () => {
       canPullToRefresh = false;
       isPulling = false;
-      ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready', 'svx-ptr-visible');
+      ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready', 'svx-ptr-visible', 'svx-ptr-refreshing', 'svx-ptr-success');
       ptr.style.transform = '';
       ptr.style.opacity = '';
       if (arc) {
@@ -561,13 +561,6 @@ export class SVXFeedController {
       if (ptr) {
         ptr.classList.remove('svx-ptr-refreshing');
         ptr.classList.add('svx-ptr-success');
-        if (iconWrap) {
-          iconWrap.innerHTML = `
-            <svg class="svx-icon svx-ptr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          `;
-        }
       }
 
       await new Promise(r => setTimeout(r, 380));
@@ -582,16 +575,12 @@ export class SVXFeedController {
           ptr.className = 'svx-pull-to-refresh';
           ptr.style.transform = '';
           ptr.style.opacity = '';
-          if (iconWrap) {
-            iconWrap.innerHTML = `
-              <svg class="svx-ptr-svg" viewBox="0 0 24 24" fill="none">
-                <circle class="svx-ptr-track" cx="12" cy="12" r="8.2" />
-                <circle class="svx-ptr-arc" cx="12" cy="12" r="8.2" stroke-dasharray="51.52" stroke-dashoffset="51.52" transform="rotate(-90 12 12)" />
-                <g class="svx-ptr-arrow-head" style="opacity: 0; transform-origin: 12px 12px;">
-                  <polyline points="11.5,1.8 14,3.8 11.5,5.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-                </g>
-              </svg>
-            `;
+          if (arc) {
+            arc.style.strokeDashoffset = `${CIRCUMFERENCE}`;
+          }
+          if (arrowHead) {
+            arrowHead.style.transform = 'rotate(0deg)';
+            arrowHead.style.opacity = '0';
           }
           this.isRefreshing = false;
         }, 280);
