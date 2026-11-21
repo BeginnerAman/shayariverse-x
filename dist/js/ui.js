@@ -338,10 +338,6 @@ export class SVXFeedController {
     this.page = 1;
     this.loading = false;
     this.isRefreshing = false;
-    this.ptr = null;
-    this.ptrArc = null;
-    this.ptrArrow = null;
-    this.CIRCUMFERENCE = 51.52; // 2 * Math.PI * 8.2
     this.intersectionObserver = null;
     this.setupIntersectionObserver();
     this.setupAudioSync();
@@ -349,11 +345,10 @@ export class SVXFeedController {
   }
 
   setupPullToRefresh() {
-    this.ptr = document.getElementById('svx-pull-to-refresh');
-    if (!this.ptr) return;
+    const ptr = document.getElementById('svx-pull-to-refresh');
+    if (!ptr) return;
 
-    this.ptrArc = this.ptr.querySelector('.svx-ptr-arc');
-    this.ptrArrow = this.ptr.querySelector('.svx-ptr-arrow-head');
+    const icon = ptr.querySelector('.svx-ptr-icon');
 
     let startY = 0;
     let startX = 0;
@@ -365,30 +360,20 @@ export class SVXFeedController {
     const DEADBAND = 14;       // Ignore first 14px of touch movement to prevent jitter
 
     const getScrollTop = () => {
-      const containerScroll = this.container ? this.container.scrollTop : 0;
       return window.pageYOffset ||
         document.documentElement.scrollTop ||
         document.body.scrollTop ||
         (document.scrollingElement ? document.scrollingElement.scrollTop : 0) ||
-        containerScroll ||
         0;
     };
 
     const resetPTR = () => {
       canPullToRefresh = false;
       isPulling = false;
-      if (this.ptr) {
-        this.ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready', 'svx-ptr-visible', 'svx-ptr-refreshing', 'svx-ptr-success');
-        this.ptr.style.transform = '';
-        this.ptr.style.opacity = '';
-      }
-      if (this.ptrArc) {
-        this.ptrArc.style.strokeDashoffset = `${this.CIRCUMFERENCE}`;
-      }
-      if (this.ptrArrow) {
-        this.ptrArrow.style.transform = 'rotate(0deg)';
-        this.ptrArrow.style.opacity = '0';
-      }
+      ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready', 'svx-ptr-visible');
+      ptr.style.transform = '';
+      ptr.style.opacity = '';
+      if (icon) icon.style.transform = '';
     };
 
     window.addEventListener('touchstart', (e) => {
@@ -465,9 +450,7 @@ export class SVXFeedController {
 
       if (!isPulling) {
         isPulling = true;
-        if (this.ptr) {
-          this.ptr.classList.add('svx-ptr-dragging', 'svx-ptr-visible');
-        }
+        ptr.classList.add('svx-ptr-dragging', 'svx-ptr-visible');
       }
 
       // Damped rubber-band physics formula
@@ -476,35 +459,25 @@ export class SVXFeedController {
       const translateY = -60 + (pullDistance * 1.15);
       const scale = Math.min(1.08, 0.85 + (pullDistance / 84) * 0.2);
 
-      if (this.ptr) {
-        this.ptr.style.transform = `translate(-50%, ${translateY}px) scale(${scale})`;
-        this.ptr.style.opacity = Math.min(1, pullDistance / 24);
-      }
+      ptr.style.transform = `translate(-50%, ${translateY}px) scale(${scale})`;
+      ptr.style.opacity = Math.min(1, pullDistance / 24);
 
-      // REAL-TIME PROGRESSIVE ARC FILL (Instagram Style)
-      const progress = Math.min(1, pullDistance / PULL_THRESHOLD);
-      const sweepAngle = progress * 280; // Sweeps up to 280 degrees at 100% threshold
-      const arcLength = (sweepAngle / 360) * this.CIRCUMFERENCE;
-      const dashoffset = Math.max(0, this.CIRCUMFERENCE - arcLength);
-
-      if (this.ptrArc) {
-        this.ptrArc.style.strokeDashoffset = `${dashoffset}`;
-      }
-      if (this.ptrArrow) {
-        this.ptrArrow.style.transform = `rotate(${sweepAngle}deg)`;
-        this.ptrArrow.style.opacity = `${Math.min(1, progress * 3)}`;
+      // Smooth arrow rotation with finger pull (0 to 360 deg)
+      const rotation = Math.min(360, (pullDistance / PULL_THRESHOLD) * 360);
+      if (icon) {
+        icon.style.transform = `rotate(${rotation}deg)`;
       }
 
       if (pullDistance >= PULL_THRESHOLD) {
-        if (this.ptr && !this.ptr.classList.contains('svx-ptr-ready')) {
-          this.ptr.classList.add('svx-ptr-ready');
+        if (!ptr.classList.contains('svx-ptr-ready')) {
+          ptr.classList.add('svx-ptr-ready');
           if (typeof navigator !== 'undefined' && navigator.vibrate) {
             try { navigator.vibrate(12); } catch {}
           }
         }
       } else {
-        if (this.ptr && this.ptr.classList.contains('svx-ptr-ready')) {
-          this.ptr.classList.remove('svx-ptr-ready');
+        if (ptr.classList.contains('svx-ptr-ready')) {
+          ptr.classList.remove('svx-ptr-ready');
         }
       }
 
@@ -517,7 +490,7 @@ export class SVXFeedController {
     window.addEventListener('touchend', () => {
       if (!canPullToRefresh) return;
       const wasPulling = isPulling;
-      const wasReady = this.ptr ? this.ptr.classList.contains('svx-ptr-ready') : false;
+      const wasReady = ptr.classList.contains('svx-ptr-ready');
 
       canPullToRefresh = false;
       isPulling = false;
@@ -538,16 +511,16 @@ export class SVXFeedController {
     if (this.isRefreshing) return;
     this.isRefreshing = true;
 
-    const ptr = this.ptr || document.getElementById('svx-pull-to-refresh');
-    const arc = this.ptrArc || ptr?.querySelector('.svx-ptr-arc');
-    const arrowHead = this.ptrArrow || ptr?.querySelector('.svx-ptr-arrow-head');
+    const ptr = document.getElementById('svx-pull-to-refresh');
+    const iconWrap = ptr?.querySelector('.svx-ptr-icon-wrap');
 
     if (ptr) {
-      ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready', 'svx-ptr-success');
+      ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready');
       ptr.classList.add('svx-ptr-refreshing', 'svx-ptr-visible');
       ptr.style.transform = 'translate(-50%, 14px) scale(1)';
       ptr.style.opacity = '1';
-      if (arrowHead) arrowHead.style.opacity = '0';
+      const icon = ptr.querySelector('.svx-ptr-icon');
+      if (icon) icon.style.transform = '';
     }
 
     const startTime = Date.now();
@@ -572,6 +545,13 @@ export class SVXFeedController {
       if (ptr) {
         ptr.classList.remove('svx-ptr-refreshing');
         ptr.classList.add('svx-ptr-success');
+        if (iconWrap) {
+          iconWrap.innerHTML = `
+            <svg class="svx-icon svx-ptr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          `;
+        }
       }
 
       await new Promise(r => setTimeout(r, 380));
@@ -579,30 +559,26 @@ export class SVXFeedController {
       console.warn('[SVX Feed] Refresh error:', err);
       showToast('Could not refresh feed. Check connection.', 'AlertCircle');
     } finally {
-      try {
-        if (ptr) {
-          ptr.style.transform = 'translate(-50%, -64px) scale(0.85)';
-          ptr.style.opacity = '0';
-          setTimeout(() => {
-            try {
-              ptr.className = 'svx-pull-to-refresh';
-              ptr.style.transform = '';
-              ptr.style.opacity = '';
-              if (arc) {
-                arc.style.strokeDashoffset = `${this.CIRCUMFERENCE}`;
-              }
-              if (arrowHead) {
-                arrowHead.style.transform = 'rotate(0deg)';
-                arrowHead.style.opacity = '0';
-              }
-            } finally {
-              this.isRefreshing = false;
-            }
-          }, 280);
-        } else {
+      if (ptr) {
+        ptr.style.transform = 'translate(-50%, -64px) scale(0.85)';
+        ptr.style.opacity = '0';
+        setTimeout(() => {
+          ptr.className = 'svx-pull-to-refresh';
+          ptr.style.transform = '';
+          ptr.style.opacity = '';
+          if (iconWrap) {
+            iconWrap.innerHTML = `
+              <svg class="svx-icon svx-ptr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                <path d="M16 21h5v-5"/>
+              </svg>
+            `;
+          }
           this.isRefreshing = false;
-        }
-      } catch (finallyErr) {
+        }, 280);
+      } else {
         this.isRefreshing = false;
       }
     }
