@@ -271,18 +271,28 @@ export function createFeedCardElement(shayari) {
 export function syncLikeStateInDOM(shayariId, isLiked, count) {
   if (!shayariId) return;
 
+  const likedBool = Boolean(isLiked);
+
   // 1. Synchronize Feed & Profile cards
-  const feedButtons = document.querySelectorAll(`.svx-feed-card[data-shayari-id="${shayariId}"] [data-action="like"]`);
+  const feedButtons = document.querySelectorAll(`.svx-feed-card[data-shayari-id="${shayariId}"] [data-action="like"], [data-shayari-id="${shayariId}"] [data-action="like"]`);
   feedButtons.forEach(btn => {
-    btn.classList.toggle('liked', isLiked);
-    btn.innerHTML = `${renderIcon(isLiked ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${count}</span>`;
+    btn.classList.toggle('liked', likedBool);
+    btn.innerHTML = `${renderIcon(likedBool ? 'HeartFilled' : 'Heart')}<span class="svx-like-count">${count}</span>`;
   });
 
   // 2. Synchronize Full-Screen Reels slides
-  const reelButtons = document.querySelectorAll(`.svx-reel-slide[data-shayari-id="${shayariId}"] [data-action="reel-like"]`);
+  const reelButtons = document.querySelectorAll(`.svx-reel-slide[data-shayari-id="${shayariId}"] [data-action="reel-like"], [data-shayari-id="${shayariId}"] [data-action="reel-like"]`);
   reelButtons.forEach(btn => {
-    btn.classList.toggle('liked', isLiked);
-    btn.innerHTML = `${renderIcon(isLiked ? 'HeartFilled' : 'Heart')}<span class="svx-reel-action-count">${count}</span>`;
+    btn.classList.toggle('liked', likedBool);
+    btn.innerHTML = `${renderIcon(likedBool ? 'HeartFilled' : 'Heart')}<span class="svx-reel-action-count">${count}</span>`;
+  });
+
+  // 3. Keep in-memory model synced across all active DOM card elements
+  document.querySelectorAll(`.svx-feed-card[data-shayari-id="${shayariId}"], .svx-reel-slide[data-shayari-id="${shayariId}"]`).forEach(el => {
+    if (el._shayari) {
+      el._shayari.has_liked = likedBool;
+      el._shayari.likes_count = count;
+    }
   });
 }
 
@@ -313,8 +323,8 @@ export async function triggerHeartBurst(cardElement, shayariId) {
   }, 800);
 
   const slideWrapper = cardElement.closest('.svx-reel-slide');
-  const likeBtn = cardElement.querySelector('[data-action="like"]') || slideWrapper?.querySelector('[data-action="reel-like"]');
-  const countSpan = likeBtn?.querySelector('.svx-like-count') || likeBtn?.querySelector('.svx-reel-action-count');
+  const likeBtn = cardElement.querySelector('[data-action="like"], [data-action="reel-like"]') || slideWrapper?.querySelector('[data-action="reel-like"]');
+  const countSpan = likeBtn?.querySelector('.svx-like-count, .svx-reel-action-count');
   const wasLiked = likeBtn?.classList.contains('liked');
 
   // Double-tap should always LIKE (or replay heart burst if already liked), never unlike
@@ -330,8 +340,14 @@ export async function triggerHeartBurst(cardElement, shayariId) {
 
   try {
     const result = await db.toggleLike(currentUser.id, shayariId);
-    if (result && typeof result.newCount === 'number') {
-      syncLikeStateInDOM(shayariId, result.liked, result.newCount);
+    if (result) {
+      if (result.liked === false) {
+        // Double-tap must NEVER unlike! If DB already had like registered and toggled off, re-like immediately
+        const restoreResult = await db.toggleLike(currentUser.id, shayariId);
+        syncLikeStateInDOM(shayariId, true, restoreResult.newCount);
+      } else if (typeof result.newCount === 'number') {
+        syncLikeStateInDOM(shayariId, true, result.newCount);
+      }
     }
   } catch (err) {
     console.warn('[SVX] Like error:', err);
@@ -2803,9 +2819,10 @@ export class SVXReelsController {
     slide._shayari = shayari;
 
     const currentUser = db.getCurrentUser();
-    const isLiked = Array.isArray(shayari.liked_by) && currentUser?.id 
-      ? shayari.liked_by.includes(currentUser.id) 
-      : false;
+    const isLiked = Boolean(
+      shayari.has_liked || 
+      (Array.isArray(shayari.liked_by) && currentUser?.id && shayari.liked_by.includes(currentUser.id))
+    );
 
     const authorInitials = (shayari.author_name || 'U').slice(0, 2);
     const fontClass = `font-${shayari.font_style || 'nastaliq'}`;
@@ -2819,7 +2836,7 @@ export class SVXReelsController {
 
     slide.innerHTML = `
       <div class="svx-reel-card-wrapper">
-        <article class="svx-reel-card mood-${moodTheme}" data-mood="${moodTheme}">
+        <article class="svx-reel-card mood-${moodTheme}" data-mood="${moodTheme}" data-shayari-id="${shayari.id}">
           <!-- Header: Author info & Verified Badge -->
           <div class="svx-reel-card-header">
             <div class="svx-reel-card-meta svx-author-group" data-action="view-profile" data-handle="${escapeHtml(shayari.author_handle)}">
@@ -2956,15 +2973,34 @@ export class SVXReelsController {
         const nextLiked = !isCurrentlyLiked;
         const nextCount = Math.max(0, currentCount + (nextLiked ? 1 : -1));
 
+        shayari.has_liked = nextLiked;
+        shayari.likes_count = nextCount;
+        if (slide._shayari) {
+          slide._shayari.has_liked = nextLiked;
+          slide._shayari.likes_count = nextCount;
+        }
+
         syncLikeStateInDOM(shayari.id, nextLiked, nextCount);
 
         try {
           const result = await db.toggleLike(currentUser.id, shayari.id);
           if (result && typeof result.newCount === 'number') {
+            shayari.has_liked = result.liked;
+            shayari.likes_count = result.newCount;
+            if (slide._shayari) {
+              slide._shayari.has_liked = result.liked;
+              slide._shayari.likes_count = result.newCount;
+            }
             syncLikeStateInDOM(shayari.id, result.liked, result.newCount);
           }
         } catch (err) {
           console.warn('[SVX Reels] Like failed:', err);
+          shayari.has_liked = isCurrentlyLiked;
+          shayari.likes_count = currentCount;
+          if (slide._shayari) {
+            slide._shayari.has_liked = isCurrentlyLiked;
+            slide._shayari.likes_count = currentCount;
+          }
           syncLikeStateInDOM(shayari.id, isCurrentlyLiked, currentCount);
         }
       });

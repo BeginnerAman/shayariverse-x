@@ -3625,18 +3625,19 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
 }
 
 .svx-reel-bar-btn.liked {
-  color: #ff4081;
-  background: rgba(255, 64, 129, 0.18);
-  border-color: rgba(255, 64, 129, 0.45);
+  color: #ff4081 !important;
+  background: rgba(255, 64, 129, 0.22) !important;
+  border-color: rgba(255, 64, 129, 0.5) !important;
 }
 
 .svx-reel-bar-btn.liked .svx-icon {
-  fill: #ff4081;
-  stroke: #ff4081;
+  fill: #ff4081 !important;
+  stroke: #ff4081 !important;
+  filter: drop-shadow(0 0 6px rgba(255, 64, 129, 0.6)) !important;
 }
 
 .svx-reel-bar-btn.liked .svx-reel-action-count {
-  color: #ff4081;
+  color: #ff4081 !important;
 }
 
 .svx-reel-empty-state {
