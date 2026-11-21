@@ -27,6 +27,7 @@ if (fs.existsSync(pkgPath)) {
     if (fs.existsSync(cfgPath)) {
       let cfgContent = fs.readFileSync(cfgPath, 'utf8');
       cfgContent = cfgContent.replace(/VERSION:\s*['"][^'"]+['"]/, `VERSION: '${pkg.version}'`);
+      cfgContent = cfgContent.replace(/download\/v[0-9.]+\/ShayariVerse-X-v[0-9.]+\.apk/g, `download/v${pkg.version}/ShayariVerse-X-v${pkg.version}.apk`);
       cfgContent = cfgContent.replace(/ShayariVerse-X-v[0-9.]+\.apk/g, `ShayariVerse-X-v${pkg.version}.apk`);
       fs.writeFileSync(cfgPath, cfgContent, 'utf8');
       console.log(`[SVX Version] Successfully synchronized ${path.basename(cfgPath)} to VERSION '${pkg.version}'`);

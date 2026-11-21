@@ -79,9 +79,10 @@ jobs:
           gh release create ${{ env.APP_TAG }} build-artifacts/ShayariVerse-X-${{ env.APP_TAG }}.apk build-artifacts/ShayariVerse-X-Latest.apk \
             --title "ShayariVerse X ${{ env.APP_TAG }}" \
             --notes "### ShayariVerse X ${{ env.APP_TAG }} Release Notes
-          - **Dark Liquid Glassmorphism Pull-to-Refresh**: Seamless pull-down gesture to refresh Feed stream instantly from cloud database, eliminating the need to close and reopen the app.
-          - **Double-Fetch Spam Protection & Zero Flicker**: Anti-spam debouncing safeguards and in-place updates keep the UI ultra-smooth and flicker-free even during rapid swipes.
-          - **Dual Refresh Methods**: Pull down from the top of the feed or tap the active Feed navigation icon to refresh content at any time.
+          - **Instagram-Style Pull-to-Refresh with Resting-at-Top Guard**: Pull gesture strictly activates only when the touch originates while stationary at the top; scrolling up from lower feed posts never triggers accidental refreshes.
+          - **Minimalist Circular Liquid Glass Indicator**: Compact circular glass indicator with a rotating arrow that seamlessly spins upon release, completely eliminating text wrapping.
+          - **High Intentionality Rubber-Band Physics**: Damped touch curve and deadband threshold ensure that subtle swipes and fast scrolls remain unaffected.
+          - **Dual Refresh Capabilities**: Pull down at the top of the feed or tap the active Feed navigation icon to refresh content at any time.
           - **Interactive Notification Controls & Custom Cover Art**: Lock screen and notification media controls with glowing ShayariVerse X star artwork.
           - **Silent Continuous Background Audio**: Persistent Android 14 mediaPlayback Foreground Service with zero interruption.
           - **Curated 268-Song Catalog**: High-fidelity streaming across the entire background score library with zero broken links."

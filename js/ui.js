@@ -349,16 +349,26 @@ export class SVXFeedController {
     if (!ptr) return;
 
     const icon = ptr.querySelector('.svx-ptr-icon');
-    const text = ptr.querySelector('.svx-ptr-text');
 
     let startY = 0;
     let startX = 0;
-    let isTracking = false;
+    let canPullToRefresh = false;
     let isPulling = false;
-    const PULL_THRESHOLD = 60; // Pixels required to trigger refresh
+
+    // Threshold in pixels of damped displacement required to activate refresh
+    const PULL_THRESHOLD = 68; // Requires ~150-160px intentional pull from top
+    const DEADBAND = 14;       // Ignore first 14px of touch movement to prevent jitter
+
+    const getScrollTop = () => {
+      return window.pageYOffset ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop ||
+        (document.scrollingElement ? document.scrollingElement.scrollTop : 0) ||
+        0;
+    };
 
     const resetPTR = () => {
-      isTracking = false;
+      canPullToRefresh = false;
       isPulling = false;
       ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready', 'svx-ptr-visible');
       ptr.style.transform = '';
@@ -367,29 +377,57 @@ export class SVXFeedController {
     };
 
     window.addEventListener('touchstart', (e) => {
-      // Only track on Feed view
+      // 1. Only allow on the active Feed view
       const feedView = document.getElementById('svx-view-feed');
-      if (!feedView || !feedView.classList.contains('active')) return;
-      if (this.isRefreshing) return;
+      if (!feedView || !feedView.classList.contains('active')) {
+        canPullToRefresh = false;
+        return;
+      }
 
-      // Only initiate if scrolled to absolute top
-      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
-      if (scrollTop > 2) return;
+      // 2. Do not allow if already refreshing
+      if (this.isRefreshing) {
+        canPullToRefresh = false;
+        return;
+      }
+
+      // 3. Do not allow if any modal / overlay / sheet is open
+      const hasModal = document.querySelector('.svx-modal-overlay.active, .svx-dialog-overlay.open, .svx-comments-drawer.open, .svx-auth-sheet.open');
+      if (hasModal) {
+        canPullToRefresh = false;
+        return;
+      }
+
+      // 4. STRICT RESTING-AT-TOP GUARD:
+      // Touch MUST originate when the feed is strictly at scrollTop <= 0.
+      // If the user touched the screen when scrolled down (even 1px),
+      // pull-to-refresh is DISABLED for the entire duration of this gesture.
+      const currentScroll = getScrollTop();
+      if (currentScroll > 0) {
+        canPullToRefresh = false;
+        isPulling = false;
+        return;
+      }
 
       if (e.touches.length === 1) {
         startY = e.touches[0].clientY;
         startX = e.touches[0].clientX;
-        isTracking = true;
+        canPullToRefresh = true;
         isPulling = false;
+      } else {
+        canPullToRefresh = false;
       }
     }, { passive: true });
 
     window.addEventListener('touchmove', (e) => {
-      if (!isTracking || this.isRefreshing) return;
-      if (e.touches.length !== 1) return;
+      if (!canPullToRefresh || this.isRefreshing) return;
+      if (e.touches.length !== 1) {
+        resetPTR();
+        return;
+      }
 
-      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
-      if (scrollTop > 2) {
+      // If at any moment during the drag the page scrolls down, abort PTR
+      const currentScroll = getScrollTop();
+      if (currentScroll > 0) {
         resetPTR();
         return;
       }
@@ -399,54 +437,62 @@ export class SVXFeedController {
       const diffY = touchY - startY;
       const diffX = Math.abs(touchX - startX);
 
-      // If scrolling upwards or swiping horizontally, cancel pulling
-      if (diffY <= 0 || diffX > diffY) return;
+      // If finger moved UP (diffY <= 0) or gesture is predominantly horizontal (diffX > diffY * 0.75):
+      if (diffY <= 0 || diffX > diffY * 0.75) {
+        if (isPulling) {
+          resetPTR();
+        }
+        return;
+      }
 
-      if (!isPulling && diffY > 6) {
+      // Below deadband: ignore tiny accidental finger movements
+      if (diffY < DEADBAND) return;
+
+      if (!isPulling) {
         isPulling = true;
         ptr.classList.add('svx-ptr-dragging', 'svx-ptr-visible');
       }
 
-      if (isPulling) {
-        // Damped resistance formula (rubber-band physics)
-        const pullDistance = Math.min(95, diffY * 0.42);
-        const translateY = -85 + (pullDistance * 1.35);
-        const scale = 0.88 + (pullDistance / 95) * 0.12;
+      // Damped rubber-band physics formula
+      const pullDelta = diffY - DEADBAND;
+      const pullDistance = Math.min(84, pullDelta * 0.44);
+      const translateY = -60 + (pullDistance * 1.15);
+      const scale = Math.min(1.08, 0.85 + (pullDistance / 84) * 0.2);
 
-        ptr.style.transform = `translate(-50%, ${translateY}px) scale(${scale})`;
-        ptr.style.opacity = Math.min(1, pullDistance / 35);
+      ptr.style.transform = `translate(-50%, ${translateY}px) scale(${scale})`;
+      ptr.style.opacity = Math.min(1, pullDistance / 24);
 
-        const rotation = (pullDistance / PULL_THRESHOLD) * 360;
-        if (icon) {
-          icon.style.transform = `rotate(${rotation}deg)`;
-        }
+      // Smooth arrow rotation with finger pull (0 to 360 deg)
+      const rotation = Math.min(360, (pullDistance / PULL_THRESHOLD) * 360);
+      if (icon) {
+        icon.style.transform = `rotate(${rotation}deg)`;
+      }
 
-        if (pullDistance >= PULL_THRESHOLD) {
-          if (!ptr.classList.contains('svx-ptr-ready')) {
-            ptr.classList.add('svx-ptr-ready');
-            if (text) text.textContent = 'Release to refresh';
-            if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try { navigator.vibrate(15); } catch {}
-            }
-          }
-        } else {
-          if (ptr.classList.contains('svx-ptr-ready')) {
-            ptr.classList.remove('svx-ptr-ready');
-            if (text) text.textContent = 'Pull to refresh';
+      if (pullDistance >= PULL_THRESHOLD) {
+        if (!ptr.classList.contains('svx-ptr-ready')) {
+          ptr.classList.add('svx-ptr-ready');
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            try { navigator.vibrate(12); } catch {}
           }
         }
-
-        if (e.cancelable && pullDistance > 12) {
-          e.preventDefault();
+      } else {
+        if (ptr.classList.contains('svx-ptr-ready')) {
+          ptr.classList.remove('svx-ptr-ready');
         }
+      }
+
+      // Prevent native browser overscroll if cancelable
+      if (e.cancelable && pullDistance > 16) {
+        e.preventDefault();
       }
     }, { passive: false });
 
     window.addEventListener('touchend', () => {
-      if (!isTracking) return;
+      if (!canPullToRefresh) return;
       const wasPulling = isPulling;
       const wasReady = ptr.classList.contains('svx-ptr-ready');
-      isTracking = false;
+
+      canPullToRefresh = false;
       isPulling = false;
 
       if (wasPulling && wasReady && !this.isRefreshing) {
@@ -466,17 +512,15 @@ export class SVXFeedController {
     this.isRefreshing = true;
 
     const ptr = document.getElementById('svx-pull-to-refresh');
-    const icon = ptr?.querySelector('.svx-ptr-icon');
     const iconWrap = ptr?.querySelector('.svx-ptr-icon-wrap');
-    const text = ptr?.querySelector('.svx-ptr-text');
 
     if (ptr) {
       ptr.classList.remove('svx-ptr-dragging', 'svx-ptr-ready');
       ptr.classList.add('svx-ptr-refreshing', 'svx-ptr-visible');
-      ptr.style.transform = 'translate(-50%, 0) scale(1)';
+      ptr.style.transform = 'translate(-50%, 14px) scale(1)';
       ptr.style.opacity = '1';
+      const icon = ptr.querySelector('.svx-ptr-icon');
       if (icon) icon.style.transform = '';
-      if (text) text.textContent = 'Refreshing...';
     }
 
     const startTime = Date.now();
@@ -502,18 +546,21 @@ export class SVXFeedController {
         ptr.classList.remove('svx-ptr-refreshing');
         ptr.classList.add('svx-ptr-success');
         if (iconWrap) {
-          iconWrap.innerHTML = renderIcon('Check', 'svx-icon svx-ptr-icon');
+          iconWrap.innerHTML = `
+            <svg class="svx-icon svx-ptr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          `;
         }
-        if (text) text.textContent = 'Updated!';
       }
 
-      await new Promise(r => setTimeout(r, 450));
+      await new Promise(r => setTimeout(r, 380));
     } catch (err) {
       console.warn('[SVX Feed] Refresh error:', err);
       showToast('Could not refresh feed. Check connection.', 'AlertCircle');
     } finally {
       if (ptr) {
-        ptr.style.transform = 'translate(-50%, -85px) scale(0.9)';
+        ptr.style.transform = 'translate(-50%, -64px) scale(0.85)';
         ptr.style.opacity = '0';
         setTimeout(() => {
           ptr.className = 'svx-pull-to-refresh';
@@ -521,7 +568,7 @@ export class SVXFeedController {
           ptr.style.opacity = '';
           if (iconWrap) {
             iconWrap.innerHTML = `
-              <svg class="svx-icon svx-ptr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg class="svx-icon svx-ptr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                 <path d="M3 3v5h5"/>
                 <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
@@ -529,9 +576,8 @@ export class SVXFeedController {
               </svg>
             `;
           }
-          if (text) text.textContent = 'Pull to refresh';
           this.isRefreshing = false;
-        }, 300);
+        }, 280);
       } else {
         this.isRefreshing = false;
       }
