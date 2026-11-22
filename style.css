@@ -521,6 +521,7 @@ textarea,
   flex-direction: column;
   gap: 18px;
   width: 100%;
+  overflow-anchor: none;
 }
 
 .svx-feed-card {

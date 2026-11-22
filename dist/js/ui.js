@@ -354,6 +354,51 @@ export async function triggerHeartBurst(cardElement, shayariId) {
   }
 }
 
+/**
+ * Universal Scroll-To-Top Engine for Home Feed
+ * Smoothly resets all scrolling contexts (window, scrollingElement, documentElement, body, view container)
+ */
+export function scrollToFeedTop(smooth = true) {
+  const behavior = smooth ? 'smooth' : 'auto';
+
+  try {
+    window.scrollTo({ top: 0, left: 0, behavior });
+  } catch {}
+
+  if (document.scrollingElement) {
+    try {
+      document.scrollingElement.scrollTo({ top: 0, left: 0, behavior });
+    } catch {
+      document.scrollingElement.scrollTop = 0;
+    }
+  }
+
+  try {
+    document.documentElement.scrollTop = 0;
+  } catch {}
+  try {
+    document.body.scrollTop = 0;
+  } catch {}
+
+  const feedView = document.getElementById('svx-view-feed');
+  if (feedView) {
+    try {
+      feedView.scrollTo({ top: 0, left: 0, behavior });
+    } catch {
+      feedView.scrollTop = 0;
+    }
+  }
+
+  const mainViewport = document.querySelector('.svx-main-viewport');
+  if (mainViewport) {
+    try {
+      mainViewport.scrollTo({ top: 0, left: 0, behavior });
+    } catch {
+      mainViewport.scrollTop = 0;
+    }
+  }
+}
+
 /* 4. Feed Controller */
 export class SVXFeedController {
   constructor(containerElement, composerModal = null, authModal = null, commentModal = null, shareEngine = null, profileController = null, getRouter = null) {
@@ -555,6 +600,7 @@ export class SVXFeedController {
       isPulling = false;
 
       if (wasPulling && wasReady && !this.isRefreshing) {
+        scrollToFeedTop(true);
         this.refreshFeed();
       } else if (wasPulling) {
         resetPTR();
@@ -569,6 +615,9 @@ export class SVXFeedController {
   async refreshFeed() {
     if (this.isRefreshing) return;
     this.isRefreshing = true;
+
+    // Immediately smooth glide scroll to top
+    scrollToFeedTop(true);
 
     const ptr = this.ptr || document.getElementById('svx-pull-to-refresh');
     const arc = this.ptrArc || ptr?.querySelector('.svx-ptr-arc');
@@ -586,7 +635,13 @@ export class SVXFeedController {
 
     try {
       this.page = 1;
+      this.hasMore = true;
+      this.isLoadingMore = false;
       const latestShayaris = await db.getFeed(1, CONFIG.FEED_PAGE_SIZE);
+
+      if (latestShayaris && latestShayaris.length < CONFIG.FEED_PAGE_SIZE) {
+        this.hasMore = false;
+      }
 
       // Smooth visual timing (minimum 400ms so spinner feels natural, not jerky)
       const elapsed = Date.now() - startTime;
@@ -596,6 +651,9 @@ export class SVXFeedController {
 
       if (latestShayaris && Array.isArray(latestShayaris) && latestShayaris.length > 0) {
         this.renderFeedItems(latestShayaris);
+        // Force scroll strictly to top after DOM elements reconstruct
+        scrollToFeedTop(true);
+        setTimeout(() => scrollToFeedTop(false), 80);
         try {
           db.local?.setCachedFeed?.(latestShayaris);
         } catch {}
@@ -612,6 +670,7 @@ export class SVXFeedController {
       showToast('Could not refresh feed. Check connection.', 'AlertCircle');
     } finally {
       try {
+        scrollToFeedTop(false);
         if (ptr) {
           ptr.style.transform = 'translate(-50%, -64px) scale(0.85)';
           ptr.style.opacity = '0';
@@ -3487,10 +3546,12 @@ export class SVXRouter {
         const targetView = item.getAttribute('data-nav-view');
         if (targetView) {
           if (targetView === 'feed' && this.currentView === 'feed') {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            if (typeof this.onFeedRefresh === 'function') {
-              this.onFeedRefresh();
-            }
+            scrollToFeedTop(true);
+            setTimeout(() => {
+              if (typeof this.onFeedRefresh === 'function') {
+                this.onFeedRefresh();
+              }
+            }, 100);
           } else if (targetView === 'reels' && this.currentView === 'reels') {
             this.reelsController?.loadReels();
           } else {
@@ -3542,7 +3603,11 @@ export class SVXRouter {
       this.profileController.render();
     }
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (viewName === 'feed') {
+      scrollToFeedTop(true);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     console.log(`[SVX] Switched to view: ${viewName}`);
   }
 }
