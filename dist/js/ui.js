@@ -366,12 +366,15 @@ export class SVXFeedController {
     this.getRouter = getRouter;
     this.page = 1;
     this.loading = false;
+    this.hasMore = true;
+    this.isLoadingMore = false;
     this.isRefreshing = false;
     this.ptr = null;
     this.ptrArc = null;
     this.ptrArrow = null;
     this.CIRCUMFERENCE = 51.52; // 2 * Math.PI * 8.2
     this.intersectionObserver = null;
+    this.sentinelObserver = null;
     this.setupIntersectionObserver();
     this.setupAudioSync();
     this.setupPullToRefresh();
@@ -686,12 +689,16 @@ export class SVXFeedController {
     });
 
     this.bindCardEvents(listWrapper);
+    this.updateFeedSentinel(listWrapper);
     return true;
   }
 
   async loadFeed() {
     if (this.loading) return;
     this.loading = true;
+    this.page = 1;
+    this.hasMore = true;
+    this.isLoadingMore = false;
 
     // 0ms Instant startup render from offline cache (zero flash)
     if (this.page === 1) {
@@ -754,12 +761,118 @@ export class SVXFeedController {
         return;
       }
 
+      if (shayaris.length < CONFIG.FEED_PAGE_SIZE) {
+        this.hasMore = false;
+      }
+
       this.renderFeedItems(shayaris);
       console.log(`[SVX] Loaded ${shayaris.length} cards into feed`);
     } catch (err) {
       console.error('[SVX] Failed to load feed:', err);
     } finally {
       this.loading = false;
+    }
+  }
+
+  updateFeedSentinel(listWrapper) {
+    if (!listWrapper) return;
+
+    // Clean up previous indicators
+    const oldSentinel = listWrapper.querySelector('.svx-feed-sentinel');
+    if (oldSentinel) oldSentinel.remove();
+    const oldEnd = listWrapper.querySelector('.svx-feed-end-badge');
+    if (oldEnd) oldEnd.remove();
+
+    if (this.hasMore) {
+      const sentinel = document.createElement('div');
+      sentinel.className = 'svx-feed-sentinel';
+      sentinel.innerHTML = `
+        <div class="svx-feed-loading-pill">
+          <div class="svx-loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      `;
+      listWrapper.appendChild(sentinel);
+
+      if (this.sentinelObserver) {
+        this.sentinelObserver.disconnect();
+      }
+
+      this.sentinelObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !this.loading && !this.isLoadingMore && this.hasMore) {
+            this.loadMoreFeed();
+          }
+        });
+      }, {
+        root: null,
+        rootMargin: '350px'
+      });
+
+      this.sentinelObserver.observe(sentinel);
+    } else if (listWrapper.querySelectorAll('.svx-feed-card').length >= CONFIG.FEED_PAGE_SIZE) {
+      const endBadge = document.createElement('div');
+      endBadge.className = 'svx-feed-end-badge';
+      endBadge.innerHTML = `
+        <div class="svx-end-icon">${renderIcon('Feather', 'svx-icon-sm')}</div>
+        <span>You are all caught up</span>
+      `;
+      listWrapper.appendChild(endBadge);
+    }
+  }
+
+  async loadMoreFeed() {
+    if (this.loading || this.isLoadingMore || !this.hasMore) return;
+    this.isLoadingMore = true;
+
+    const listWrapper = this.container.querySelector('.svx-feed-list');
+    const sentinelPill = listWrapper?.querySelector('.svx-feed-loading-pill');
+    if (sentinelPill) sentinelPill.classList.add('visible');
+
+    try {
+      this.page += 1;
+      const nextBatch = await db.getFeed(this.page, CONFIG.FEED_PAGE_SIZE);
+
+      if (!nextBatch || nextBatch.length === 0) {
+        this.hasMore = false;
+        this.updateFeedSentinel(listWrapper);
+        return;
+      }
+
+      if (nextBatch.length < CONFIG.FEED_PAGE_SIZE) {
+        this.hasMore = false;
+      }
+
+      // Avoid duplicates
+      const existingCards = listWrapper.querySelectorAll('.svx-feed-card');
+      const existingIds = new Set(Array.from(existingCards).map(c => c.getAttribute('data-shayari-id')));
+      const freshBatch = nextBatch.filter(s => !existingIds.has(s.id));
+
+      if (freshBatch.length === 0) {
+        this.hasMore = false;
+        this.updateFeedSentinel(listWrapper);
+        return;
+      }
+
+      // Remove sentinel before appending new cards
+      const oldSentinel = listWrapper.querySelector('.svx-feed-sentinel');
+      if (oldSentinel) oldSentinel.remove();
+
+      freshBatch.forEach(s => {
+        const card = createFeedCardElement(s);
+        listWrapper.appendChild(card);
+        this.intersectionObserver?.observe(card);
+      });
+
+      this.updateFeedSentinel(listWrapper);
+      console.log(`[SVX Feed] Stream expanded to page ${this.page} (+${freshBatch.length} cards)`);
+    } catch (err) {
+      console.warn('[SVX Feed] Error loading next page:', err);
+      this.page = Math.max(1, this.page - 1);
+    } finally {
+      this.isLoadingMore = false;
+      if (sentinelPill) sentinelPill.classList.remove('visible');
     }
   }
 
@@ -2725,6 +2838,10 @@ export class SVXReelsController {
     this.observer = null;
     this.hasLoaded = false;
     this.isLoading = false;
+    this.hasMore = true;
+    this.isLoadingMore = false;
+    this.page = 1;
+    this.REELS_PAGE_SIZE = 20;
     this._audioPlayTimeout = null;
     this.lastUserId = null;
 
@@ -2740,6 +2857,7 @@ export class SVXReelsController {
           const idx = parseInt(entry.target.getAttribute('data-index') || '0', 10);
           this.currentIndex = idx;
           this.onSlideActive(entry.target);
+          this.checkAndLoadMore(idx);
         }
       });
     }, {
@@ -2751,6 +2869,9 @@ export class SVXReelsController {
   async loadReels() {
     if (this.isLoading) return;
     this.isLoading = true;
+    this.page = 1;
+    this.hasMore = true;
+    this.isLoadingMore = false;
 
     try {
       this.container.innerHTML = `
@@ -2762,12 +2883,16 @@ export class SVXReelsController {
         </div>
       `;
 
-      // Fetch posts across categories from unified DB
-      const items = await db.getFeed(1, 60);
+      // Fetch first chunk of posts across categories from unified DB
+      const items = await db.getFeed(1, this.REELS_PAGE_SIZE);
 
       if (!items || items.length === 0) {
         this.renderEmpty();
         return;
+      }
+
+      if (items.length < this.REELS_PAGE_SIZE) {
+        this.hasMore = false;
       }
 
       // Fisher-Yates shuffle for diverse, fair discovery across all poets
@@ -2782,6 +2907,105 @@ export class SVXReelsController {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  async checkAndLoadMore(currentIdx) {
+    if (this.isLoadingMore || !this.hasMore) return;
+    if (currentIdx >= this.reels.length - 4) {
+      await this.loadMoreReels();
+    }
+  }
+
+  async loadMoreReels() {
+    if (this.isLoadingMore || !this.hasMore) return;
+    this.isLoadingMore = true;
+
+    try {
+      this.page += 1;
+      const nextBatch = await db.getFeed(this.page, this.REELS_PAGE_SIZE);
+
+      if (!nextBatch || nextBatch.length === 0) {
+        this.hasMore = false;
+        this.appendEndSlide();
+        return;
+      }
+
+      if (nextBatch.length < this.REELS_PAGE_SIZE) {
+        this.hasMore = false;
+      }
+
+      const existingIds = new Set(this.reels.map(r => r.id));
+      const freshItems = nextBatch.filter(item => !existingIds.has(item.id));
+
+      if (freshItems.length === 0) {
+        this.hasMore = false;
+        this.appendEndSlide();
+        return;
+      }
+
+      const shuffledBatch = this.shuffle(freshItems);
+      const startIndex = this.reels.length;
+
+      shuffledBatch.forEach((shayari, i) => {
+        const slideIndex = startIndex + i;
+        this.reels.push(shayari);
+        const slide = this.createSlideElement(shayari, slideIndex);
+        this.container.appendChild(slide);
+        this.observer?.observe(slide);
+      });
+
+      if (!this.hasMore) {
+        this.appendEndSlide();
+      }
+
+      console.log(`[SVX Reels] Stream auto-extended: +${shuffledBatch.length} slides (total: ${this.reels.length})`);
+    } catch (err) {
+      console.warn('[SVX Reels] Failed to fetch next reel batch:', err);
+      this.page = Math.max(1, this.page - 1);
+    } finally {
+      this.isLoadingMore = false;
+    }
+  }
+
+  appendEndSlide() {
+    if (this.container.querySelector('.svx-reel-end-slide')) return;
+    const endSlide = document.createElement('div');
+    endSlide.className = 'svx-reel-slide svx-reel-end-slide';
+    endSlide.setAttribute('data-index', this.reels.length);
+    endSlide.innerHTML = `
+      <div class="svx-reel-card-wrapper">
+        <article class="svx-reel-card mood-purple" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 36px 24px;">
+          <div class="svx-placeholder-icon" style="margin-bottom: 18px; width: 56px; height: 56px; border-radius: 50%; background: rgba(147, 51, 234, 0.15); display: flex; align-items: center; justify-content: center;">
+            ${renderIcon('Feather', 'svx-icon-lg')}
+          </div>
+          <h3 style="font-size: 18px; font-weight: 700; color: var(--svx-text-primary); margin-bottom: 8px;">You've Explored All Reels</h3>
+          <p style="font-size: 13px; color: var(--svx-text-secondary); max-width: 270px; line-height: 1.5; margin-bottom: 24px;">
+            You have discovered every published poetic reel. Tap below to shuffle and rediscover fresh verses.
+          </p>
+          <button class="svx-btn-post" id="svx-reels-restart-btn" type="button" style="padding: 10px 22px; font-size: 13.5px;">
+            ${renderIcon('RotateCcw', 'svx-icon-sm')}
+            <span>Discover Again</span>
+          </button>
+        </article>
+      </div>
+    `;
+    this.container.appendChild(endSlide);
+    this.observer?.observe(endSlide);
+
+    const restartBtn = endSlide.querySelector('#svx-reels-restart-btn');
+    restartBtn?.addEventListener('click', () => {
+      this.loadReels();
+    });
+  }
+
+  prependReel(shayari) {
+    if (!this.hasLoaded) return;
+    this.reels.unshift(shayari);
+    const slide = this.createSlideElement(shayari, 0);
+    this.container.insertBefore(slide, this.container.firstChild);
+    const allSlides = this.container.querySelectorAll('.svx-reel-slide');
+    allSlides.forEach((s, idx) => s.setAttribute('data-index', idx));
+    this.observer?.observe(slide);
   }
 
   async syncUserLikes() {
@@ -2850,10 +3074,14 @@ export class SVXReelsController {
       this.observer?.observe(slide);
     });
 
+    if (!this.hasMore) {
+      this.appendEndSlide();
+    }
+
     this.container.scrollTop = 0;
     this.currentIndex = 0;
 
-    const firstSlide = this.container.querySelector('.svx-reel-slide');
+    const firstSlide = this.container.querySelector('.svx-reel-slide:not(.svx-reel-end-slide)');
     if (firstSlide) {
       setTimeout(() => {
         this.onSlideActive(firstSlide);
@@ -3105,7 +3333,11 @@ export class SVXReelsController {
     this.activeSlide = slide;
 
     const shayari = slide._shayari;
-    if (!shayari) return;
+    if (!shayari) {
+      clearTimeout(this._audioPlayTimeout);
+      audioEngine.pause();
+      return;
+    }
 
     // Reset visualizer animations on all other slides
     this.container.querySelectorAll('.svx-reel-slide').forEach(s => s.classList.remove('active-slide'));
@@ -3581,7 +3813,7 @@ export function initUI() {
       } else {
         feedController?.prependCard(newShayari);
         if (reelsController && reelsController.hasLoaded) {
-          reelsController.reels.unshift(newShayari);
+          reelsController.prependReel(newShayari);
         }
         router?.switchView('feed');
         window.scrollTo({ top: 0, behavior: 'smooth' });

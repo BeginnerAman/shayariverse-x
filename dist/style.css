@@ -3650,5 +3650,89 @@ button, a, input, textarea, .svx-nav-item, .svx-feed-card, .svx-btn-like, .svx-b
   margin: auto;
 }
 
+/* Feed Infinite Scroll Sentinel & End Badge */
+.svx-feed-sentinel {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0;
+  min-height: 44px;
+}
+
+.svx-feed-loading-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border-radius: var(--svx-glass-radius-pill);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.svx-feed-loading-pill.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.svx-loading-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.svx-loading-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--svx-primary);
+  animation: svx-dot-pulse 1.2s infinite ease-in-out both;
+}
+
+.svx-loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.svx-loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes svx-dot-pulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.35; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.svx-feed-end-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  margin: 16px auto 32px auto;
+  border-radius: var(--svx-glass-radius-pill);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--svx-text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  width: fit-content;
+}
+
+.svx-feed-end-badge .svx-end-icon {
+  display: flex;
+  align-items: center;
+  color: var(--svx-primary);
+  opacity: 0.85;
+}
+
+/* Reels Stream End Slide */
+.svx-reel-slide.svx-reel-end-slide .svx-reel-card {
+  border-color: rgba(147, 51, 234, 0.25);
+  background: radial-gradient(circle at 50% 40%, rgba(147, 51, 234, 0.12), transparent 70%),
+              rgba(18, 14, 28, 0.65);
+}
+
+
 
 
