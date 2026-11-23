@@ -4,9 +4,9 @@
 export const CONFIG = {
   APP_NAME: 'ShayariVerse X',
   APP_SHORT: 'SVX',
-  VERSION: '1.4.2',
+  VERSION: '1.5.0',
   MIN_SUPPORTED_VERSION: '1.1.4',
-  APK_DOWNLOAD_URL: 'https://github.com/BeginnerAman/shayariverse-x/releases/download/v1.4.2/ShayariVerse-X-v1.4.2.apk',
+  APK_DOWNLOAD_URL: 'https://github.com/BeginnerAman/shayariverse-x/releases/download/v1.5.0/ShayariVerse-X-v1.5.0.apk',
   RELEASE_URL: 'https://github.com/BeginnerAman/shayariverse-x/releases/latest',
   REPO_URL: 'https://github.com/BeginnerAman/shayariverse-x',
 

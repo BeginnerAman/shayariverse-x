@@ -83,16 +83,14 @@ jobs:
           gh release create ${{ env.APP_TAG }} build-artifacts/ShayariVerse-X-${{ env.APP_TAG }}.apk build-artifacts/ShayariVerse-X-Latest.apk \
             --title "ShayariVerse X ${{ env.APP_TAG }}" \
             --notes "### ShayariVerse X ${{ env.APP_TAG }} Release Notes
-          - **Smart Auto-Login on Registration**: Entering an existing handle with matching credentials in the registration sheet now seamlessly logs into the real account with full cloud profile sync.
-          - **Session Auto-Repair & Live Identity Guard**: Automatically detects and heals any legacy ghost sessions into verified cloud accounts, guaranteeing posts save permanently to the live feed.
-          - **Infinite Repeatable Pull-To-Refresh**: Fixed scope reference error in refresh cycle cleanup, ensuring the refresh lock reliably releases after every pull for seamless repeated use.
-          - **Persistent Signing Keystore (Zero Installation Errors)**: Enforced persistent keystore directly in Gradle to eliminate signature mismatch across CI builds.
-          - **Permanent Dynamic Arc (Subsequent Pulls Fixed)**: Zero-DOM-destruction architecture ensures the progressive SVG arc and leading arrowhead persist permanently across all repeated refreshes without getting detached or frozen.
-          - **Instagram-Style Dynamic Progressive Arc-Fill**: Circular neon ring progressively fills in real-time proportional to finger pull distance, exactly like Instagram and native Android SwipeRefreshLayout.
-          - **Directional Leading Arrowhead**: Fluid arrowhead leads the stroke as the circle draws, seamlessly morphing into an infinite liquid glass spinner on release.
-          - **Strict Resting-at-Top Guard**: Pull gesture activates exclusively when the touch begins while stationary at the top; scrolling up never triggers accidental refreshes.
-          - **Minimalist Liquid Glass Disc**: Ultra-clean 42px circular badge with zero text-wrapping issues across any Android screen size.
-          - **Dual Refresh Capabilities**: Pull down at the top of the feed or tap the active Feed navigation icon to refresh content at any time.
+          - **Full-Screen Poetry Reels Stream**: Immersive vertical feed with 120Hz native touch gesture snapping, 1 card per swipe, fluid swipe physics, and auto-synchronized background audio.
+          - **Dynamic Infinite Streaming Pagination**: High-efficiency chunk streaming for both Feed (20-item pages) and Reels (60-item batches) with automatic boundary prefetching and infinite scroll, keeping RAM consumption ultra-low.
+          - **Vibrant Cinematic Mood Themes**: Distinct glowing glass auras and gradient backdrops (Purple, Cyan, Rose, Amber, Emerald) adapting dynamically to shayari mood.
+          - **Immediate Real-Time Like Synchronization**: Instantly synchronizes user liked states across all Feed cards and Reels slides immediately upon login.
+          - **Tablet & Large Screen Ergonomics**: Fully responsive layout on tablets (iPad and Android tablets) with centered reel cards, symmetrical vertical margins above the floating dock, and centered empty-state artwork.
+          - **Zero-Lag Discover Music Playback**: Instant zero-latency audio preview in Discover, completely isolated from Reels background audio observers.
+          - **Smooth Pull-to-Refresh with Instant Top Anchor**: Pull down cleanly resets to Page 1 and glides smoothly to top without scroll anchoring friction.
+          - **Persistent Signing Keystore**: Enforced persistent keystore directly in Gradle to eliminate signature mismatch across all CI builds.
           - **Interactive Notification Controls & Custom Cover Art**: Lock screen and notification media controls with glowing ShayariVerse X star artwork.
           - **Silent Continuous Background Audio**: Persistent Android 14 mediaPlayback Foreground Service with zero interruption.
           - **Curated 268-Song Catalog**: High-fidelity streaming across the entire background score library with zero broken links."
