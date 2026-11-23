@@ -131,6 +131,7 @@ class AudioEngine {
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
+          document.body?.classList.add('svx-screen-off');
           if (this._isPlaying) {
             if (!this.backgroundPlaybackEnabled) {
               console.log('[SVX Audio] App backgrounded, auto-pausing audio (Background Playback is OFF)');
@@ -141,6 +142,7 @@ class AudioEngine {
             }
           }
         } else {
+          document.body?.classList.remove('svx-screen-off');
           // When returning to foreground: verify playback continuity
           if (this._isPlaying && this.audio && this.audio.paused && this.backgroundPlaybackEnabled) {
             console.log('[SVX Audio] Restoring audio continuity on foreground return...');
