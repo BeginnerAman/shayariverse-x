@@ -2911,6 +2911,9 @@ export class SVXReelsController {
     if (typeof IntersectionObserver === 'undefined') return;
 
     this.observer = new IntersectionObserver((entries) => {
+      const router = typeof this.getRouter === 'function' ? this.getRouter() : this.getRouter;
+      if (router && router.currentView !== 'reels') return;
+
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const idx = parseInt(entry.target.getAttribute('data-index') || '0', 10);
@@ -3143,7 +3146,10 @@ export class SVXReelsController {
     const firstSlide = this.container.querySelector('.svx-reel-slide:not(.svx-reel-end-slide)');
     if (firstSlide) {
       setTimeout(() => {
-        this.onSlideActive(firstSlide);
+        const router = typeof this.getRouter === 'function' ? this.getRouter() : this.getRouter;
+        if (router && router.currentView === 'reels') {
+          this.onSlideActive(firstSlide);
+        }
       }, 150);
     }
   }
@@ -3388,13 +3394,19 @@ export class SVXReelsController {
   }
 
   onSlideActive(slide) {
+    const router = typeof this.getRouter === 'function' ? this.getRouter() : this.getRouter;
+    if (router && router.currentView !== 'reels') return;
+
     if (this.activeSlide === slide) return;
     this.activeSlide = slide;
 
     const shayari = slide._shayari;
     if (!shayari) {
       clearTimeout(this._audioPlayTimeout);
-      audioEngine.pause();
+      this._audioPlayTimeout = null;
+      if (router && router.currentView === 'reels') {
+        audioEngine.pause(true);
+      }
       return;
     }
 
@@ -3407,7 +3419,10 @@ export class SVXReelsController {
     // Debounce audio playback slightly so smooth scroll settling is instantaneous and fluid
     clearTimeout(this._audioPlayTimeout);
     this._audioPlayTimeout = setTimeout(() => {
+      const currentRouter = typeof this.getRouter === 'function' ? this.getRouter() : this.getRouter;
+      if (currentRouter && currentRouter.currentView !== 'reels') return;
       if (this.activeSlide !== slide) return;
+
       const vinyl = slide.querySelector('.svx-vinyl-disc');
       const musicPill = slide.querySelector('.svx-reel-music-pill');
 
@@ -3423,14 +3438,22 @@ export class SVXReelsController {
         });
       } else {
         musicPill?.classList.toggle('muted', this.isMuted);
-        audioEngine.pause();
+        if (currentRouter && currentRouter.currentView === 'reels') {
+          audioEngine.pause(true);
+        }
       }
     }, 120);
   }
 
   pause() {
     clearTimeout(this._audioPlayTimeout);
-    audioEngine.pause();
+    this._audioPlayTimeout = null;
+    this.activeSlide = null;
+    const currentTrack = audioEngine.getCurrentTrack();
+    const isPlayingReelTrack = this.reels && this.reels.some(r => r.song_url && r.song_url === currentTrack?.url);
+    if (isPlayingReelTrack) {
+      audioEngine.pause(true);
+    }
     this.container.querySelectorAll('.svx-vinyl-disc').forEach(el => el.classList.remove('spinning'));
   }
 
@@ -3582,9 +3605,9 @@ export class SVXRouter {
     this.currentView = viewName;
 
     // Handle Reels Audio Auto-Stop / Auto-Resume
-    if (prevView === 'reels' && viewName !== 'reels') {
+    if (viewName !== 'reels') {
       this.reelsController?.pause();
-    } else if (viewName === 'reels') {
+    } else {
       this.reelsController?.resume();
     }
 

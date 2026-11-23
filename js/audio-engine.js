@@ -534,20 +534,30 @@ class AudioEngine {
       return;
     }
 
-    // If same track is already loaded and paused, resume with smooth fade-in
+    // Reset fallback retry flag for each new play attempt
+    this._retriedRaw = false;
+
+    // If same track is already loaded and paused, resume immediately
     if (this.currentTrack && this.currentTrack.url === url) {
       try {
+        clearInterval(this._fadeTimer);
+        this.audio.volume = 1;
         await this.audio.play();
-        this.fadeIn();
         return;
       } catch (err) {
         console.warn('[SVX Audio] Resume failed, re-loading track:', err);
       }
     }
 
-    // If another track was currently playing, smoothly fade out before switching
-    if (this._isPlaying) {
-      await this.fadeOut(150);
+    // If another track was currently playing, stop it immediately without blocking delay
+    clearInterval(this._fadeTimer);
+    if (this._isPlaying && this.audio) {
+      try {
+        this.audio.pause();
+      } catch {}
+    }
+    if (this.audio) {
+      this.audio.volume = 1;
     }
 
     // Switch to new track
@@ -591,7 +601,6 @@ class AudioEngine {
 
     try {
       await this.audio.play();
-      this.fadeIn();
     } catch (err) {
       console.warn('[SVX Audio] Play request prevented by browser autoplay policy:', err);
       this._isPlaying = false;
