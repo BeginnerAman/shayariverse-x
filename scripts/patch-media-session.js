@@ -30,6 +30,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
@@ -37,6 +38,7 @@ import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Binder;
+import android.os.PowerManager;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -73,6 +75,7 @@ public class MediaSessionService extends Service {
 
     private MediaSessionPlugin plugin;
     private MediaSessionCallback callback;
+    private PowerManager.WakeLock wakeLock = null;
 
     private final IBinder binder = new LocalBinder();
 
@@ -129,6 +132,16 @@ public class MediaSessionService extends Service {
         int smallIconId = getResources().getIdentifier("ic_stat_music", "drawable", getPackageName());
         if (smallIconId == 0) {
             smallIconId = R.drawable.ic_baseline_volume_up_24;
+        }
+
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && wakeLock == null) {
+                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SVX:AudioPlaybackWakeLock");
+                wakeLock.setReferenceCounted(false);
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "Failed to initialize PARTIAL_WAKE_LOCK: " + e.getMessage());
         }
 
         notificationStyle = new MediaStyle().setMediaSession(mediaSession.getSessionToken());
@@ -208,9 +221,42 @@ public class MediaSessionService extends Service {
         }
     }
 
+    private void manageWakeLock(int state) {
+        try {
+            if (wakeLock != null) {
+                if (state == PlaybackStateCompat.STATE_PLAYING) {
+                    if (!wakeLock.isHeld()) {
+                        wakeLock.acquire();
+                        Log.d(TAG, "Audio PARTIAL_WAKE_LOCK acquired for uninterrupted background playback");
+                    }
+                } else {
+                    if (wakeLock.isHeld()) {
+                        wakeLock.release();
+                        Log.d(TAG, "Audio PARTIAL_WAKE_LOCK released");
+                    }
+                }
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "WakeLock manage error: " + e.getMessage());
+        }
+    }
+
     public void destroy() {
+        manageWakeLock(PlaybackStateCompat.STATE_NONE);
+        if (wakeLock != null && wakeLock.isHeld()) {
+            try {
+                wakeLock.release();
+            } catch (Throwable ignored) {}
+        }
+        wakeLock = null;
         stopForeground(true);
         stopSelf();
+    }
+
+    @Override
+    public void onDestroy() {
+        destroy();
+        super.onDestroy();
     }
 
     @Override
@@ -242,6 +288,7 @@ public class MediaSessionService extends Service {
     public void setPlaybackState(int playbackState) {
         if (this.playbackState != playbackState) {
             this.playbackState = playbackState;
+            manageWakeLock(playbackState);
             playbackStateUpdate = true;
             possibleActionsUpdate = true;
         }
@@ -301,6 +348,7 @@ public class MediaSessionService extends Service {
     }
 
     public void update() {
+        manageWakeLock(this.playbackState);
         if (possibleActionsUpdate) {
             buildActions();
             possibleActionsUpdate = false;
