@@ -5,15 +5,24 @@ import { CONFIG } from './config.js';
 
 class AudioEngine {
   constructor() {
-    this.audio = typeof Audio !== 'undefined' ? new Audio() : {
-      addEventListener() {},
-      play() { return Promise.resolve(); },
-      pause() {},
-      load() {}
+    const createPlayer = () => {
+      return typeof Audio !== 'undefined' ? new Audio() : {
+        addEventListener() {},
+        play() { return Promise.resolve(); },
+        pause() {},
+        load() {}
+      };
     };
-    if (this.audio) {
-      this.audio.loop = true; // Seamless endless loop for couplet background music
-    }
+
+    // Dual-Engine Players for true, zero-gap overlapping crossfade
+    this.audioA = createPlayer();
+    this.audioB = createPlayer();
+    this.audio = this.audioA; // Points to current active player
+    this.activePlayerId = 'A'; // 'A' | 'B'
+
+    if (this.audioA) this.audioA.loop = true;
+    if (this.audioB) this.audioB.loop = true;
+
     this.playbackMode = 'loop'; // 'loop' | 'sequential' | 'shuffle'
     this.playlist = [];
     this.currentIndex = -1;
@@ -22,9 +31,9 @@ class AudioEngine {
     this._curatedCache = null;
     this._fadeTimer = null;
     this._sleepFadeTimer = null;
-    this._autoCrossfadeTimer = null;
-    this._isAutoFadingOut = false;
-    this._isAutoSwitching = false;
+    this._crossfadeTimer = null;
+    this._isCrossfading = false;
+    this._prebufferedTrack = null;
     this._playRequestId = 0;
     this._mediaSessionWired = false;
     this._nativeMediaActionsWired = false;
@@ -54,70 +63,90 @@ class AudioEngine {
       error: new Set()
     };
 
-    this._bindAudioEvents();
+    this._bindPlayerEvents(this.audioA, 'A');
+    this._bindPlayerEvents(this.audioB, 'B');
     this._bindVisibilityEvents();
   }
 
-  _bindAudioEvents() {
-    if (!this.audio.addEventListener) return;
-    this.audio.addEventListener('play', () => {
-      this._isPlaying = true;
-      this._acquireWakeLock();
-      this._updateMediaSession(this.currentTrack);
-      this._notify('playState', { isPlaying: true, track: this.currentTrack });
+  _bindPlayerEvents(player, id) {
+    if (!player || !player.addEventListener) return;
+
+    player.addEventListener('play', () => {
+      if (this.activePlayerId === id || this._isCrossfading) {
+        this._isPlaying = true;
+        this._acquireWakeLock();
+        this._notify('playState', { isPlaying: true, track: this.currentTrack });
+      }
     });
 
-    this.audio.addEventListener('pause', () => {
-      // If we are auto-switching between tracks, keep wakeLock and do not notify paused state to Android OS
-      if (this._isAutoSwitching) {
-        return;
-      }
-      this._isPlaying = false;
-      this._releaseWakeLock();
-      if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'paused';
-      }
-      const nativeMS = this._getNativeMediaSession();
-      if (nativeMS) {
-        nativeMS.setPlaybackState({ playbackState: 'paused' }).catch(() => {});
-      }
-      this._notify('playState', { isPlaying: false, track: this.currentTrack });
-    });
-
-    this.audio.addEventListener('ended', () => {
-      if (this.playbackMode === 'sequential' || this.playbackMode === 'shuffle') {
-        this._triggerAutoNext();
-      } else {
+    player.addEventListener('pause', () => {
+      // If crossfading between players, do not release wake lock or notify paused
+      if (this._isCrossfading) return;
+      if (this.activePlayerId === id) {
         this._isPlaying = false;
         this._releaseWakeLock();
+        if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'paused';
+        }
         const nativeMS = this._getNativeMediaSession();
         if (nativeMS) {
-          nativeMS.setPlaybackState({ playbackState: 'none' }).catch(() => {});
+          nativeMS.setPlaybackState({ playbackState: 'paused' }).catch(() => {});
         }
         this._notify('playState', { isPlaying: false, track: this.currentTrack });
       }
     });
 
-    this.audio.addEventListener('timeupdate', () => {
-      if (this.audio.duration) {
+    player.addEventListener('ended', () => {
+      if (this.activePlayerId === id && !this._isCrossfading) {
+        if (this.playbackMode === 'sequential' || this.playbackMode === 'shuffle') {
+          this.playNext({ autoNext: true });
+        } else {
+          this._isPlaying = false;
+          this._releaseWakeLock();
+          const nativeMS = this._getNativeMediaSession();
+          if (nativeMS) {
+            nativeMS.setPlaybackState({ playbackState: 'none' }).catch(() => {});
+          }
+          this._notify('playState', { isPlaying: false, track: this.currentTrack });
+        }
+      }
+    });
+
+    player.addEventListener('timeupdate', () => {
+      if (this.activePlayerId === id && player.duration) {
         this._notify('timeUpdate', {
-          currentTime: this.audio.currentTime,
-          duration: this.audio.duration,
-          progress: (this.audio.currentTime / this.audio.duration) * 100
+          currentTime: player.currentTime,
+          duration: player.duration,
+          progress: (player.currentTime / player.duration) * 100
         });
 
-        // Discover ambient 2s crossfade-out before track naturally ends
-        const remainingTime = this.audio.duration - this.audio.currentTime;
+        // Discover ambient pre-buffering and True Overlapping Crossfade
+        const remainingTime = player.duration - player.currentTime;
         const isDiscover = this.currentTrack && (
           this.currentTrack.source === 'discover' || 
           this.currentTrack.source === 'cdn' || 
           this.currentTrack.source === 'jiosaavn' || 
           this.currentTrack.source === 'itunes'
         );
+
         if (isDiscover && (this.playbackMode === 'sequential' || this.playbackMode === 'shuffle') && !this._isSleepFading) {
-          if (remainingTime <= 2.5 && remainingTime > 0.15 && !this._isAutoFadingOut) {
-            this._isAutoFadingOut = true;
-            this._softCrossfadeOut(Math.round(remainingTime * 1000));
+          // 1. Pre-buffer incoming track 8 seconds before end (0ms network delay later)
+          if (remainingTime <= 8 && !this._prebufferedTrack && !this._isCrossfading) {
+            const nextInfo = this._peekNextTrack();
+            if (nextInfo && nextInfo.track) {
+              this._prebufferedTrack = nextInfo;
+              const standbyPlayer = this.activePlayerId === 'A' ? this.audioB : this.audioA;
+              standbyPlayer.src = nextInfo.track.url;
+              standbyPlayer.preload = 'auto';
+              standbyPlayer.load();
+              standbyPlayer.volume = 0.05; // 5% whisper floor keeps Android pipeline alive
+              console.log('[SVX Audio] Pre-buffered next track for zero-gap crossfade:', nextInfo.track.name);
+            }
+          }
+
+          // 2. Start True Overlapping Crossfade at 2.2 seconds before end
+          if (remainingTime <= 2.2 && remainingTime > 0.1 && !this._isCrossfading) {
+            this._startOverlappingCrossfade();
           }
         }
 
@@ -125,9 +154,9 @@ class AudioEngine {
         if (typeof navigator !== 'undefined' && 'mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
           try {
             navigator.mediaSession.setPositionState({
-              duration: this.audio.duration || 0,
-              playbackRate: this.audio.playbackRate || 1,
-              position: this.audio.currentTime || 0
+              duration: player.duration || 0,
+              playbackRate: player.playbackRate || 1,
+              position: player.currentTime || 0
             });
           } catch {}
         }
@@ -135,24 +164,26 @@ class AudioEngine {
         const nativeMS = this._getNativeMediaSession();
         if (nativeMS) {
           nativeMS.setPositionState({
-            duration: this.audio.duration || 0,
-            playbackRate: this.audio.playbackRate || 1,
-            position: this.audio.currentTime || 0
+            duration: player.duration || 0,
+            playbackRate: player.playbackRate || 1,
+            position: player.currentTime || 0
           }).catch(() => {});
         }
       }
     });
 
-    this.audio.addEventListener('error', (e) => {
-      console.warn('[SVX Audio] Playback error or network failure:', e);
-      this._isPlaying = false;
-      this._releaseWakeLock();
-      const nativeMS = this._getNativeMediaSession();
-      if (nativeMS) {
-        nativeMS.setPlaybackState({ playbackState: 'none' }).catch(() => {});
+    player.addEventListener('error', (e) => {
+      if (this.activePlayerId === id) {
+        console.warn(`[SVX Audio] Playback error on player ${id}:`, e);
+        this._isPlaying = false;
+        this._releaseWakeLock();
+        const nativeMS = this._getNativeMediaSession();
+        if (nativeMS) {
+          nativeMS.setPlaybackState({ playbackState: 'none' }).catch(() => {});
+        }
+        this._notify('playState', { isPlaying: false, track: this.currentTrack });
+        this._notify('error', e);
       }
-      this._notify('playState', { isPlaying: false, track: this.currentTrack });
-      this._notify('error', e);
     });
   }
 
@@ -180,19 +211,21 @@ class AudioEngine {
 
           // Discover music: maintain continuous background stream
           console.log('[SVX Audio] App backgrounded, maintaining persistent Discover background playback stream...');
-          if (!this._isAutoFadingOut && !this._fadeTimer && !this._isSleepFading && this.audio) {
-            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          const activePlayer = this.audio || (this.activePlayerId === 'A' ? this.audioA : this.audioB);
+          if (!this._isCrossfading && !this._fadeTimer && !this._isSleepFading && activePlayer) {
+            activePlayer.volume = this.DEFAULT_VOLUME || 0.95;
           }
           this._acquireWakeLock();
 
-          // Verify playback continuity: if Android WebView paused HTMLAudioElement, immediately resume
-          if (this._isPlaying && this.audio && this.audio.paused) {
-            this.audio.play().catch(() => {});
+          // Verify playback continuity: if Android WebView paused activePlayer, immediately resume
+          if (this._isPlaying && activePlayer && activePlayer.paused) {
+            activePlayer.play().catch(() => {});
           }
         } else {
           document.body?.classList.remove('svx-screen-off');
-          if (!this._isAutoFadingOut && !this._fadeTimer && !this._isSleepFading && this.audio) {
-            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          const activePlayer = this.audio || (this.activePlayerId === 'A' ? this.audioA : this.audioB);
+          if (!this._isCrossfading && !this._fadeTimer && !this._isSleepFading && activePlayer) {
+            activePlayer.volume = this.DEFAULT_VOLUME || 0.95;
           }
 
           // When returning to foreground: restore Discover continuity if paused
@@ -202,9 +235,9 @@ class AudioEngine {
             this.currentTrack.source === 'jiosaavn' || 
             this.currentTrack.source === 'itunes'
           );
-          if (isDiscover && this._isPlaying && this.audio && this.audio.paused && this.backgroundPlaybackEnabled) {
+          if (isDiscover && this._isPlaying && activePlayer && activePlayer.paused && this.backgroundPlaybackEnabled) {
             console.log('[SVX Audio] Restoring Discover audio continuity on foreground return...');
-            this.audio.play().catch(() => {});
+            activePlayer.play().catch(() => {});
           }
         }
       });
@@ -385,9 +418,8 @@ class AudioEngine {
   setPlaybackMode(mode) {
     if (!['loop', 'sequential', 'shuffle'].includes(mode)) return;
     this.playbackMode = mode;
-    if (this.audio) {
-      this.audio.loop = mode === 'loop';
-    }
+    if (this.audioA) this.audioA.loop = mode === 'loop';
+    if (this.audioB) this.audioB.loop = mode === 'loop';
     this._notify('modeChange', { mode });
   }
 
@@ -407,12 +439,8 @@ class AudioEngine {
     return this.playlist;
   }
 
-  async playNext(options = {}) {
-    if (!this.playlist || this.playlist.length === 0) {
-      await this.loadCuratedBGM();
-    }
-    if (!this.playlist || this.playlist.length === 0) return;
-
+  _peekNextTrack() {
+    if (!this.playlist || this.playlist.length === 0) return null;
     let nextIndex;
     if (this.playbackMode === 'shuffle') {
       if (this.playlist.length === 1) {
@@ -425,16 +453,148 @@ class AudioEngine {
     } else {
       nextIndex = (this.currentIndex + 1) % this.playlist.length;
     }
+    const track = this.playlist[nextIndex];
+    if (!track) return null;
+    return { track, index: nextIndex };
+  }
 
-    this.currentIndex = nextIndex;
-    const nextTrack = this.playlist[nextIndex];
-    if (nextTrack) {
-      const isAuto = Boolean(options && options.autoNext);
-      this.play(nextTrack.url, { ...nextTrack, source: 'discover' }, {
-        fadeOutMs: isAuto ? 0 : 500,
-        fadeInMs: isAuto ? 2000 : 800
-      });
+  /**
+   * True Overlapping Dual-Player Studio DJ Crossfade strictly for Discover music
+   * Outgoing player fades down (0.95 -> 0.05) while incoming standby player blooms up (0.05 -> 0.95)
+   * Both run simultaneously over 2000ms with zero silent gap (0ms dead air)
+   */
+  async _startOverlappingCrossfade() {
+    if (this._isCrossfading || this._isSleepFading) return;
+    this._isCrossfading = true;
+
+    let nextInfo = this._prebufferedTrack;
+    if (!nextInfo || !nextInfo.track) {
+      nextInfo = this._peekNextTrack();
     }
+    if (!nextInfo || !nextInfo.track) {
+      this._isCrossfading = false;
+      return;
+    }
+
+    const outgoingId = this.activePlayerId;
+    const incomingId = outgoingId === 'A' ? 'B' : 'A';
+    const outgoingPlayer = outgoingId === 'A' ? this.audioA : this.audioB;
+    const incomingPlayer = incomingId === 'A' ? this.audioA : this.audioB;
+
+    console.log('[SVX Audio] Starting True Dual-Player Overlapping Crossfade to:', nextInfo.track.name);
+
+    if (!incomingPlayer.src || !incomingPlayer.src.includes(nextInfo.track.url)) {
+      incomingPlayer.src = nextInfo.track.url;
+      incomingPlayer.load();
+    }
+
+    incomingPlayer.loop = (this.playbackMode === 'loop');
+    incomingPlayer.volume = 0.05; // 5% whisper floor keeps Android decoding pipeline active
+
+    try {
+      await incomingPlayer.play();
+    } catch (err) {
+      console.warn('[SVX Audio] Standby player autoplay error, fallback to sequential:', err);
+      this._isCrossfading = false;
+      this._prebufferedTrack = null;
+      return;
+    }
+
+    const durationMs = 2000;
+    const startTime = Date.now();
+    const maxVolume = this.DEFAULT_VOLUME || 0.95;
+    const minFloor = 0.05;
+
+    clearInterval(this._crossfadeTimer);
+    this._crossfadeTimer = setInterval(() => {
+      try {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(1, Math.max(0, elapsed / durationMs));
+
+        // Simultaneous volume ramps: zero gap, true overlap
+        const outVol = Math.max(minFloor, maxVolume - (maxVolume - minFloor) * progress);
+        const inVol = Math.min(maxVolume, minFloor + (maxVolume - minFloor) * progress);
+
+        outgoingPlayer.volume = outVol;
+        incomingPlayer.volume = inVol;
+
+        if (progress >= 1) {
+          clearInterval(this._crossfadeTimer);
+          this._crossfadeTimer = null;
+
+          try {
+            outgoingPlayer.pause();
+            outgoingPlayer.currentTime = 0;
+            outgoingPlayer.volume = maxVolume;
+          } catch {}
+
+          incomingPlayer.volume = maxVolume;
+
+          this.activePlayerId = incomingId;
+          this.audio = incomingPlayer;
+          this.currentIndex = nextInfo.index;
+          this.currentTrack = {
+            ...nextInfo.track,
+            source: 'discover'
+          };
+          this._prebufferedTrack = null;
+          this._isCrossfading = false;
+
+          this._acquireWakeLock();
+          this._updateMediaSession(this.currentTrack);
+          this._notify('trackChange', this.currentTrack);
+          this._notify('playState', { isPlaying: true, track: this.currentTrack });
+          console.log('[SVX Audio] Dual-Player Crossfade complete. Active player is now:', this.activePlayerId);
+        }
+      } catch (err) {
+        clearInterval(this._crossfadeTimer);
+        this._crossfadeTimer = null;
+        this._isCrossfading = false;
+      }
+    }, 40);
+
+    setTimeout(() => {
+      if (this._isCrossfading && this._crossfadeTimer) {
+        clearInterval(this._crossfadeTimer);
+        this._crossfadeTimer = null;
+        try {
+          outgoingPlayer.pause();
+          outgoingPlayer.currentTime = 0;
+          outgoingPlayer.volume = maxVolume;
+        } catch {}
+        incomingPlayer.volume = maxVolume;
+        this.activePlayerId = incomingId;
+        this.audio = incomingPlayer;
+        this.currentIndex = nextInfo.index;
+        this.currentTrack = {
+          ...nextInfo.track,
+          source: 'discover'
+        };
+        this._prebufferedTrack = null;
+        this._isCrossfading = false;
+        this._acquireWakeLock();
+        this._updateMediaSession(this.currentTrack);
+        this._notify('trackChange', this.currentTrack);
+        this._notify('playState', { isPlaying: true, track: this.currentTrack });
+      }
+    }, durationMs + 250);
+  }
+
+  async playNext(options = {}) {
+    if (!this.playlist || this.playlist.length === 0) {
+      await this.loadCuratedBGM();
+    }
+    if (!this.playlist || this.playlist.length === 0) return;
+    if (this._isCrossfading) return;
+
+    const nextInfo = this._peekNextTrack();
+    if (!nextInfo || !nextInfo.track) return;
+
+    this.currentIndex = nextInfo.index;
+    this.play(nextInfo.track.url, { ...nextInfo.track, source: 'discover' }, {
+      fadeOutMs: 300,
+      fadeInMs: 400
+    });
   }
 
   async playPrevious(options = {}) {
@@ -442,6 +602,7 @@ class AudioEngine {
       await this.loadCuratedBGM();
     }
     if (!this.playlist || this.playlist.length === 0) return;
+    if (this._isCrossfading) return;
 
     let prevIndex;
     if (this.playbackMode === 'shuffle') {
@@ -454,99 +615,29 @@ class AudioEngine {
     const prevTrack = this.playlist[prevIndex];
     if (prevTrack) {
       this.play(prevTrack.url, { ...prevTrack, source: 'discover' }, {
-        fadeOutMs: 500,
-        fadeInMs: 800
+        fadeOutMs: 300,
+        fadeInMs: 400
       });
     }
   }
 
-  _triggerAutoNext() {
-    if (this._isAutoSwitching) return;
-    this._isAutoSwitching = true;
-    clearInterval(this._autoCrossfadeTimer);
-    this._autoCrossfadeTimer = null;
-    this._isAutoFadingOut = false;
-
-    console.log('[SVX Audio] Triggering seamless auto-next track transition...');
-    this.playNext({ autoNext: true });
-
-    setTimeout(() => {
-      this._isAutoSwitching = false;
-    }, 1500);
-  }
-
   /**
-   * Ambient soft crossfade-out as a Discover track nears completion
-   * Gently decreases volume from current down to 0.05 (whisper level) using wall-clock time
-   * Operates seamlessly across active screen, background, and lock screen
-   * @param {number} durationMs - Duration in ms (default 2000ms)
-   */
-  _softCrossfadeOut(durationMs = 2000) {
-    if (!this.audio || !this._isPlaying || this._isSleepFading || this._isAutoSwitching) return;
-
-    clearInterval(this._autoCrossfadeTimer);
-    const startVolume = this.audio.volume || this.DEFAULT_VOLUME || 0.95;
-    const minAudibleVolume = 0.05; // 5% volume keeps Android/Chromium background audio pipeline active
-    const totalDuration = Math.max(300, durationMs);
-    const startTime = Date.now();
-
-    this._autoCrossfadeTimer = setInterval(() => {
-      try {
-        if (!this.audio || !this._isPlaying || this._isSleepFading) {
-          clearInterval(this._autoCrossfadeTimer);
-          this._autoCrossfadeTimer = null;
-          return;
-        }
-
-        const elapsed = Date.now() - startTime;
-        const fraction = Math.min(1, Math.max(0, elapsed / totalDuration));
-        const currentVol = Math.max(minAudibleVolume, startVolume - (startVolume - minAudibleVolume) * fraction);
-
-        this.audio.volume = currentVol;
-
-        if (fraction >= 1 || currentVol <= minAudibleVolume + 0.005) {
-          this.audio.volume = minAudibleVolume;
-          clearInterval(this._autoCrossfadeTimer);
-          this._autoCrossfadeTimer = null;
-          this._isAutoFadingOut = false;
-
-          // Transition immediately to next track once soft fade-out finishes
-          this._triggerAutoNext();
-        }
-      } catch {
-        clearInterval(this._autoCrossfadeTimer);
-        this._autoCrossfadeTimer = null;
-      }
-    }, 50);
-
-    // Timeout safety fallback
-    setTimeout(() => {
-      if (this._isAutoFadingOut && this.audio && !this._isSleepFading) {
-        clearInterval(this._autoCrossfadeTimer);
-        this._autoCrossfadeTimer = null;
-        this._isAutoFadingOut = false;
-        this._triggerAutoNext();
-      }
-    }, totalDuration + 200);
-  }
-
-  /**
-   * Smoothly fades out audio volume before pausing (prevents abrupt click/cut)
-   * Using wall-clock time interpolation
+   * Smoothly fades out audio volume before pausing using wall-clock time
    * @param {number} durationMs - Duration in ms (default 200ms)
    * @returns {Promise<void>}
    */
   async fadeOut(durationMs = 200) {
-    if (!this._isPlaying || !this.audio || !this.audio.pause) {
-      if (this.audio) {
-        try { this.audio.pause(); } catch {}
-        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+    const activePlayer = this.audio || (this.activePlayerId === 'A' ? this.audioA : this.audioB);
+    if (!this._isPlaying || !activePlayer || !activePlayer.pause) {
+      if (activePlayer) {
+        try { activePlayer.pause(); } catch {}
+        activePlayer.volume = this.DEFAULT_VOLUME || 0.95;
       }
       return;
     }
 
     clearInterval(this._fadeTimer);
-    const startVolume = this.audio.volume || this.DEFAULT_VOLUME || 0.95;
+    const startVolume = activePlayer.volume || this.DEFAULT_VOLUME || 0.95;
     const totalDuration = Math.max(40, durationMs);
     const startTime = Date.now();
 
@@ -557,24 +648,24 @@ class AudioEngine {
           const fraction = Math.min(1, Math.max(0, elapsed / totalDuration));
           const nextVol = Math.max(0, startVolume * (1 - fraction));
 
-          if (this.audio && fraction < 1 && nextVol > 0.02) {
-            this.audio.volume = nextVol;
+          if (activePlayer && fraction < 1 && nextVol > 0.02) {
+            activePlayer.volume = nextVol;
           } else {
             clearInterval(this._fadeTimer);
             this._fadeTimer = null;
-            if (this.audio) {
-              this.audio.volume = 0;
-              try { this.audio.pause(); } catch {}
-              this.audio.volume = this.DEFAULT_VOLUME || 0.95; // restore base volume
+            if (activePlayer) {
+              activePlayer.volume = 0;
+              try { activePlayer.pause(); } catch {}
+              activePlayer.volume = this.DEFAULT_VOLUME || 0.95;
             }
             resolve();
           }
         } catch {
           clearInterval(this._fadeTimer);
           this._fadeTimer = null;
-          if (this.audio) {
-            try { this.audio.pause(); } catch {}
-            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          if (activePlayer) {
+            try { activePlayer.pause(); } catch {}
+            activePlayer.volume = this.DEFAULT_VOLUME || 0.95;
           }
           resolve();
         }
@@ -584,9 +675,9 @@ class AudioEngine {
         if (this._fadeTimer) {
           clearInterval(this._fadeTimer);
           this._fadeTimer = null;
-          if (this.audio) {
-            try { this.audio.pause(); } catch {}
-            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          if (activePlayer) {
+            try { activePlayer.pause(); } catch {}
+            activePlayer.volume = this.DEFAULT_VOLUME || 0.95;
           }
           resolve();
         }
@@ -596,11 +687,11 @@ class AudioEngine {
 
   /**
    * Smoothly fades in audio volume on start/resume using wall-clock time
-   * Operates seamlessly across active screen, background, and lock screen
    * @param {number} durationMs - Duration in ms (default 220ms)
    */
   fadeIn(durationMs = 220) {
-    if (!this.audio) return;
+    const activePlayer = this.audio || (this.activePlayerId === 'A' ? this.audioA : this.audioB);
+    if (!activePlayer) return;
     clearInterval(this._fadeTimer);
     this._fadeTimer = null;
 
@@ -610,12 +701,12 @@ class AudioEngine {
     const startTime = Date.now();
 
     try {
-      this.audio.volume = minAudibleVolume;
+      activePlayer.volume = minAudibleVolume;
     } catch {}
 
     this._fadeTimer = setInterval(() => {
       try {
-        if (!this.audio || this._isSleepFading || this._isAutoFadingOut) {
+        if (!activePlayer || this._isSleepFading) {
           clearInterval(this._fadeTimer);
           this._fadeTimer = null;
           return;
@@ -625,28 +716,27 @@ class AudioEngine {
         const fraction = Math.min(1, Math.max(0, elapsed / totalDuration));
         const nextVol = Math.min(targetVolume, minAudibleVolume + (targetVolume - minAudibleVolume) * fraction);
 
-        this.audio.volume = nextVol;
+        activePlayer.volume = nextVol;
 
-        if (fraction >= 1 || this.audio.volume >= targetVolume) {
-          this.audio.volume = targetVolume;
+        if (fraction >= 1 || activePlayer.volume >= targetVolume) {
+          activePlayer.volume = targetVolume;
           clearInterval(this._fadeTimer);
           this._fadeTimer = null;
         }
       } catch {
-        if (this.audio) this.audio.volume = targetVolume;
+        if (activePlayer) activePlayer.volume = targetVolume;
         clearInterval(this._fadeTimer);
         this._fadeTimer = null;
       }
-    }, 50);
+    }, 40);
 
-    // Safeguard: guarantee volume reaches targetVolume even under Android background timer throttling
     setTimeout(() => {
-      if (this.audio && !this._isSleepFading && !this._isAutoFadingOut) {
+      if (activePlayer && !this._isSleepFading) {
         if (this._fadeTimer) {
           clearInterval(this._fadeTimer);
           this._fadeTimer = null;
         }
-        this.audio.volume = targetVolume;
+        activePlayer.volume = targetVolume;
       }
     }, totalDuration + 250);
   }
@@ -668,14 +758,12 @@ class AudioEngine {
   }
 
   async resume() {
-    if (this.audio && this.currentTrack) {
+    const activePlayer = this.audio || (this.activePlayerId === 'A' ? this.audioA : this.audioB);
+    if (activePlayer && this.currentTrack) {
       try {
         this._isSleepFading = false;
         clearInterval(this._fadeTimer);
         this._fadeTimer = null;
-        clearInterval(this._autoCrossfadeTimer);
-        this._autoCrossfadeTimer = null;
-        this._isAutoFadingOut = false;
         if (this._sleepFadeTimer) {
           clearInterval(this._sleepFadeTimer);
           this._sleepFadeTimer = null;
@@ -686,8 +774,10 @@ class AudioEngine {
           this.currentTrack.source === 'jiosaavn' || 
           this.currentTrack.source === 'itunes'
         );
-        await this.audio.play();
-        this.fadeIn(isDiscover ? 600 : 200);
+        await activePlayer.play();
+        this._isPlaying = true;
+        this._acquireWakeLock();
+        this.fadeIn(isDiscover ? 400 : 200);
       } catch (err) {
         console.warn('[SVX Audio] Resume error:', err);
       }
@@ -703,92 +793,152 @@ class AudioEngine {
       return;
     }
 
-    // Reset fallback retry flag for each new play attempt
-    this._retriedRaw = false;
+    const reqId = ++this._playRequestId;
 
-    // Reset auto-crossfade state for new track
-    clearInterval(this._autoCrossfadeTimer);
-    this._autoCrossfadeTimer = null;
-    this._isAutoFadingOut = false;
+    // Strict boundary: reels and post audio never crossfade and never use dual players
+    const isReelOrPost = metadata.source === 'reel' || metadata.source === 'post';
+    if (isReelOrPost) {
+      this._isCrossfading = false;
+      clearInterval(this._crossfadeTimer);
+      this._crossfadeTimer = null;
+      this._prebufferedTrack = null;
 
-    // If same track is already loaded:
+      const standbyPlayer = this.activePlayerId === 'A' ? this.audioB : this.audioA;
+      if (standbyPlayer) {
+        try { standbyPlayer.pause(); standbyPlayer.currentTime = 0; } catch {}
+      }
+
+      if (this.audio) {
+        try { this.audio.pause(); } catch {}
+      }
+
+      this.currentTrack = {
+        url,
+        name: metadata.name || 'Post Audio',
+        artist: metadata.artist || 'ShayariVerse X',
+        art: metadata.art || null,
+        source: metadata.source
+      };
+
+      this.audio.loop = false;
+      this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+      this.audio.src = url;
+      try {
+        await this.audio.play();
+        this._isPlaying = true;
+        this._acquireWakeLock();
+        this._notify('trackChange', this.currentTrack);
+        this._notify('playState', { isPlaying: true, track: this.currentTrack });
+      } catch (err) {
+        this._isPlaying = false;
+        this._notify('playState', { isPlaying: false, track: this.currentTrack });
+      }
+      return;
+    }
+
+    // Discover Music
+    const isDiscover = true;
+
+    // Same track already playing: resume or update
     if (this.currentTrack && this.currentTrack.url === url) {
-      if (this._isPlaying && this.audio && !this.audio.paused) {
-        if (metadata.source) {
-          this.currentTrack.source = metadata.source;
-        }
-        return; // Continuous playback without stutter
+      const activePlayer = this.audio || (this.activePlayerId === 'A' ? this.audioA : this.audioB);
+      if (this._isPlaying && activePlayer && !activePlayer.paused) {
+        return;
       }
       try {
         this._isSleepFading = false;
         clearInterval(this._fadeTimer);
         this._fadeTimer = null;
-        if (this._sleepFadeTimer) {
-          clearInterval(this._sleepFadeTimer);
-          this._sleepFadeTimer = null;
-        }
-        if (metadata.source) {
-          this.currentTrack.source = metadata.source;
-        }
-        const isDiscover = this.currentTrack && (
-          this.currentTrack.source === 'discover' || 
-          this.currentTrack.source === 'cdn' || 
-          this.currentTrack.source === 'jiosaavn' || 
-          this.currentTrack.source === 'itunes'
-        );
-        await this.audio.play();
-        const resumeFadeIn = typeof options.fadeInMs === 'number' ? options.fadeInMs : (isDiscover ? 600 : 200);
-        this.fadeIn(resumeFadeIn);
+        await activePlayer.play();
+        this._isPlaying = true;
+        this._acquireWakeLock();
+        this.fadeIn(400);
         return;
       } catch (err) {
         console.warn('[SVX Audio] Resume failed, re-loading track:', err);
       }
     }
 
-    // Monotonic request counter to prevent race conditions during rapid skipping
-    const reqId = ++this._playRequestId;
+    // Zero-gap simultaneous switch if another Discover track is currently playing
+    const activePlayer = this.audio || (this.activePlayerId === 'A' ? this.audioA : this.audioB);
+    const standbyPlayer = this.activePlayerId === 'A' ? this.audioB : this.audioA;
+    const standbyId = this.activePlayerId === 'A' ? 'B' : 'A';
 
-    const isDiscover = metadata.source === 'discover' || 
-                       metadata.source === 'cdn' || 
-                       metadata.source === 'jiosaavn' || 
-                       metadata.source === 'itunes' || 
-                       (!metadata.source && (!this.currentTrack || this.currentTrack.source === 'discover'));
+    if (this._isPlaying && activePlayer && !activePlayer.paused && !options.immediate && standbyPlayer) {
+      this._isCrossfading = true;
+      standbyPlayer.src = url;
+      standbyPlayer.loop = (this.playbackMode === 'loop');
+      standbyPlayer.volume = 0.05; // 5% whisper floor keeps Android pipeline active
 
-    const defaultFadeOut = isDiscover ? 500 : 180;
-    const defaultFadeIn = isDiscover ? 800 : 220;
+      try {
+        await standbyPlayer.play();
 
-    const fadeOutDuration = typeof options.fadeOutMs === 'number' ? options.fadeOutMs : defaultFadeOut;
-    const fadeInDuration = typeof options.fadeInMs === 'number' ? options.fadeInMs : defaultFadeIn;
+        const durationMs = 350; // quick studio DJ crossfade for manual click
+        const startTime = Date.now();
+        const maxVol = this.DEFAULT_VOLUME || 0.95;
+        const minFloor = 0.05;
 
-    // Smooth micro fade-out of old track if currently playing
-    if (this._isPlaying && this.audio && !this.audio.paused && !options.immediate) {
-      if (fadeOutDuration > 0) {
-        await this.fadeOut(fadeOutDuration);
-        if (reqId !== this._playRequestId) return; // Superseded by a newer play request
-      } else {
-        clearInterval(this._fadeTimer);
-        this._fadeTimer = null;
-        if (this.audio) {
-          try { this.audio.pause(); } catch {}
-        }
-      }
-    } else {
-      clearInterval(this._fadeTimer);
-      this._fadeTimer = null;
-      if (this.audio) {
-        try { this.audio.pause(); } catch {}
+        clearInterval(this._crossfadeTimer);
+        this._crossfadeTimer = setInterval(() => {
+          try {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(1, Math.max(0, elapsed / durationMs));
+            const outVol = Math.max(minFloor, maxVol - (maxVol - minFloor) * progress);
+            const inVol = Math.min(maxVol, minFloor + (maxVol - minFloor) * progress);
+
+            activePlayer.volume = outVol;
+            standbyPlayer.volume = inVol;
+
+            if (progress >= 1) {
+              clearInterval(this._crossfadeTimer);
+              this._crossfadeTimer = null;
+              try {
+                activePlayer.pause();
+                activePlayer.currentTime = 0;
+                activePlayer.volume = maxVol;
+              } catch {}
+              standbyPlayer.volume = maxVol;
+
+              this.activePlayerId = standbyId;
+              this.audio = standbyPlayer;
+              this.currentTrack = {
+                url,
+                name: metadata.name || 'Unknown Track',
+                artist: metadata.artist || 'Unknown Artist',
+                art: metadata.art || null,
+                source: metadata.source || 'discover'
+              };
+              if (this.playlist.length > 0) {
+                const idx = this.playlist.findIndex(t => t.url === url);
+                if (idx !== -1) this.currentIndex = idx;
+              }
+              this._prebufferedTrack = null;
+              this._isCrossfading = false;
+              this._acquireWakeLock();
+              this._updateMediaSession(this.currentTrack);
+              this._notify('trackChange', this.currentTrack);
+              this._notify('playState', { isPlaying: true, track: this.currentTrack });
+            }
+          } catch {
+            clearInterval(this._crossfadeTimer);
+            this._crossfadeTimer = null;
+            this._isCrossfading = false;
+          }
+        }, 30);
+        return;
+      } catch (e) {
+        // Standby play failed, fall through to activePlayer
+        this._isCrossfading = false;
       }
     }
 
-    if (this._isSleepFading) {
-      this._isSleepFading = false;
-      if (this._sleepFadeTimer) {
-        clearInterval(this._sleepFadeTimer);
-        this._sleepFadeTimer = null;
-      }
+    // Default single-player start
+    clearInterval(this._fadeTimer);
+    this._fadeTimer = null;
+    if (this.audio) {
+      try { this.audio.pause(); } catch {}
     }
 
-    // Switch to new track
     this.currentTrack = {
       url,
       name: metadata.name || 'Unknown Track',
@@ -799,69 +949,39 @@ class AudioEngine {
 
     if (this.playlist.length > 0) {
       const idx = this.playlist.findIndex(t => t.url === url);
-      if (idx !== -1) {
-        this.currentIndex = idx;
-      }
+      if (idx !== -1) this.currentIndex = idx;
     }
 
-    this._isPlaying = true;
-    this._acquireWakeLock();
-
-    if (this.audio) {
-      this.audio.loop = (this.playbackMode === 'loop');
-      try {
-        this.audio.volume = fadeInDuration > 0 ? 0.05 : (this.DEFAULT_VOLUME || 0.95);
-      } catch {}
-    }
-
-    this._notify('trackChange', this.currentTrack);
-
+    this.audio.loop = (this.playbackMode === 'loop');
+    this.audio.volume = 0.05;
     this.audio.src = url;
-    this.audio.load();
-
-    // Resilient CDN fallback: If jsDelivr encounters an edge issue, auto-fallback to raw GitHub
-    this.audio.onerror = () => {
-      if (url.includes('cdn.jsdelivr.net') && !this._retriedRaw) {
-        this._retriedRaw = true;
-        const rawUrl = url
-          .replace('https://cdn.jsdelivr.net/gh/beginneraman/shayariverse-x@main/', 'https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/')
-          .replace('https://cdn.jsdelivr.net/gh/BeginnerAman/shayariverse-x@main/', 'https://raw.githubusercontent.com/BeginnerAman/shayariverse-x/main/');
-        console.log('[SVX Audio] CDN edge fallback to direct raw GitHub stream:', rawUrl);
-        this.audio.src = rawUrl;
-        this.audio.load();
-        this.audio.play().then(() => {
-          this._isPlaying = true;
-          this._acquireWakeLock();
-          if (fadeInDuration > 0) {
-            this.fadeIn(fadeInDuration);
-          } else if (this.audio) {
-            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
-          }
-        }).catch(() => {});
-      }
-    };
 
     try {
       await this.audio.play();
       this._isPlaying = true;
       this._acquireWakeLock();
-      if (fadeInDuration > 0) {
-        this.fadeIn(fadeInDuration);
-      } else if (this.audio) {
-        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
-      }
+      this.fadeIn(400);
+      this._updateMediaSession(this.currentTrack);
+      this._notify('trackChange', this.currentTrack);
+      this._notify('playState', { isPlaying: true, track: this.currentTrack });
     } catch (err) {
-      console.warn('[SVX Audio] Play request prevented by browser autoplay policy:', err);
+      console.warn('[SVX Audio] Play request error:', err);
       this._isPlaying = false;
       this._notify('playState', { isPlaying: false, track: this.currentTrack });
     }
   }
 
   pause(immediate = false) {
-    this._isAutoSwitching = false;
-    clearInterval(this._autoCrossfadeTimer);
-    this._autoCrossfadeTimer = null;
-    this._isAutoFadingOut = false;
+    this._isCrossfading = false;
+    clearInterval(this._crossfadeTimer);
+    this._crossfadeTimer = null;
+    this._prebufferedTrack = null;
+
+    const standbyPlayer = this.activePlayerId === 'A' ? this.audioB : this.audioA;
+    if (standbyPlayer) {
+      try { standbyPlayer.pause(); standbyPlayer.currentTime = 0; } catch {}
+    }
+
     if (immediate) {
       clearInterval(this._fadeTimer);
       if (this.audio) {
@@ -876,14 +996,14 @@ class AudioEngine {
       this.currentTrack.source === 'jiosaavn' || 
       this.currentTrack.source === 'itunes'
     );
-    this.fadeOut(isDiscover ? 400 : 200);
+    this.fadeOut(isDiscover ? 300 : 200);
   }
 
   stop() {
-    this._isAutoSwitching = false;
-    clearInterval(this._autoCrossfadeTimer);
-    this._autoCrossfadeTimer = null;
-    this._isAutoFadingOut = false;
+    this._isCrossfading = false;
+    clearInterval(this._crossfadeTimer);
+    this._crossfadeTimer = null;
+    this._prebufferedTrack = null;
     clearInterval(this._fadeTimer);
     this._fadeTimer = null;
     if (this._sleepFadeTimer) {
@@ -891,11 +1011,17 @@ class AudioEngine {
       this._sleepFadeTimer = null;
     }
     this._isSleepFading = false;
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.currentTime = 0;
-      this.audio.volume = this.DEFAULT_VOLUME || 0.95;
-    }
+
+    [this.audioA, this.audioB].forEach(p => {
+      if (p) {
+        try {
+          p.pause();
+          p.currentTime = 0;
+          p.volume = this.DEFAULT_VOLUME || 0.95;
+        } catch {}
+      }
+    });
+
     this._isPlaying = false;
     this._releaseWakeLock();
     const nativeMS = this._getNativeMediaSession();
@@ -914,10 +1040,9 @@ class AudioEngine {
         this.currentTrack.source === 'itunes'
       );
       if (this._isPlaying) {
-        await this.fadeOut(isDiscover ? 400 : 200);
+        await this.fadeOut(isDiscover ? 300 : 200);
       } else {
-        await this.audio.play();
-        this.fadeIn(isDiscover ? 600 : 200);
+        await this.resume();
       }
     } else {
       await this.play(url, metadata, options);
@@ -1075,7 +1200,10 @@ class AudioEngine {
   }
 
   setVolume(level) {
-    this.audio.volume = Math.max(0, Math.min(1, level));
+    const v = Math.max(0, Math.min(1, Number(level) || 0));
+    this.DEFAULT_VOLUME = v;
+    if (this.audioA) this.audioA.volume = v;
+    if (this.audioB) this.audioB.volume = v;
   }
 
   getCurrentTrack() {
