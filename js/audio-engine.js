@@ -141,6 +141,12 @@ class AudioEngine {
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
           document.body?.classList.add('svx-screen-off');
+          clearInterval(this._fadeTimer);
+          this._fadeTimer = null;
+          // Ensure volume is always full in background (never muted)
+          if (this.audio) {
+            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          }
           if (this._isPlaying) {
             if (!this.backgroundPlaybackEnabled) {
               console.log('[SVX Audio] App backgrounded, auto-pausing audio (Background Playback is OFF)');
@@ -148,10 +154,19 @@ class AudioEngine {
             } else {
               console.log('[SVX Audio] App backgrounded, maintaining persistent background playback stream...');
               this._acquireWakeLock();
+              // Verify continuity: if audio was paused by webview backgrounding, restart immediately
+              if (this.audio && this.audio.paused) {
+                this.audio.play().catch(() => {});
+              }
             }
           }
         } else {
           document.body?.classList.remove('svx-screen-off');
+          clearInterval(this._fadeTimer);
+          this._fadeTimer = null;
+          if (this.audio) {
+            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          }
           // When returning to foreground: verify playback continuity
           if (this._isPlaying && this.audio && this.audio.paused && this.backgroundPlaybackEnabled) {
             console.log('[SVX Audio] Restoring audio continuity on foreground return...');
@@ -410,9 +425,10 @@ class AudioEngine {
    * @returns {Promise<void>}
    */
   async fadeOut(durationMs = 200) {
-    if (!this._isPlaying || !this.audio || !this.audio.pause) {
+    if (!this._isPlaying || !this.audio || !this.audio.pause || (typeof document !== 'undefined' && document.hidden)) {
       if (this.audio) {
         try { this.audio.pause(); } catch {}
+        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
       }
       return;
     }
@@ -455,6 +471,10 @@ class AudioEngine {
     if (!this.audio) return;
     clearInterval(this._fadeTimer);
     const targetVolume = this.DEFAULT_VOLUME || 0.95;
+    if (typeof document !== 'undefined' && document.hidden) {
+      this.audio.volume = targetVolume;
+      return;
+    }
     try {
       this.audio.volume = 0;
     } catch {}
@@ -501,19 +521,22 @@ class AudioEngine {
       try {
         this._isSleepFading = false;
         clearInterval(this._fadeTimer);
+        this._fadeTimer = null;
         if (this._sleepFadeTimer) {
           clearInterval(this._sleepFadeTimer);
           this._sleepFadeTimer = null;
         }
+        if (this.audio) {
+          this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+        }
         await this.audio.play();
-        this.fadeIn(200);
       } catch (err) {
         console.warn('[SVX Audio] Resume error:', err);
       }
     }
   }
 
-  async play(url, metadata = {}, options = {}) {
+  async play(url, metadata = {}) {
     if (!url) {
       if (this.currentTrack) {
         return this.resume();
@@ -533,49 +556,37 @@ class AudioEngine {
       try {
         this._isSleepFading = false;
         clearInterval(this._fadeTimer);
+        this._fadeTimer = null;
         if (this._sleepFadeTimer) {
           clearInterval(this._sleepFadeTimer);
           this._sleepFadeTimer = null;
         }
+        if (this.audio) {
+          this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+        }
         await this.audio.play();
-        const resumeFadeIn = typeof options.fadeInMs === 'number' ? options.fadeInMs : 200;
-        this.fadeIn(resumeFadeIn);
         return;
       } catch (err) {
         console.warn('[SVX Audio] Resume failed, re-loading track:', err);
       }
     }
 
-    // Monotonic request counter to prevent race conditions during rapid skipping
-    const reqId = ++this._playRequestId;
-
-    const fadeOutDuration = typeof options.fadeOutMs === 'number' ? options.fadeOutMs : 180;
-    const fadeInDuration = typeof options.fadeInMs === 'number' ? options.fadeInMs : 220;
-
-    // Smooth micro fade-out of old track if currently playing
-    if (this._isPlaying && this.audio && !this.audio.paused && !options.immediate) {
-      if (fadeOutDuration > 0) {
-        await this.fadeOut(fadeOutDuration);
-        if (reqId !== this._playRequestId) return; // Superseded by a newer play request
-      } else {
-        clearInterval(this._fadeTimer);
-        if (this.audio) {
-          try { this.audio.pause(); } catch {}
-        }
-      }
-    } else {
-      clearInterval(this._fadeTimer);
-      if (this.audio) {
-        try { this.audio.pause(); } catch {}
-      }
+    // Stop previous track immediately without blocking delay (NEVER await setInterval in play)
+    this._isSleepFading = false;
+    clearInterval(this._fadeTimer);
+    this._fadeTimer = null;
+    if (this._sleepFadeTimer) {
+      clearInterval(this._sleepFadeTimer);
+      this._sleepFadeTimer = null;
     }
-
-    if (this._isSleepFading) {
-      this._isSleepFading = false;
-      if (this._sleepFadeTimer) {
-        clearInterval(this._sleepFadeTimer);
-        this._sleepFadeTimer = null;
-      }
+    if (this._isPlaying && this.audio) {
+      try {
+        this.audio.pause();
+      } catch {}
+    }
+    // ALWAYS initialize volume to 0.95 synchronously (NEVER 0, which breaks in background)
+    if (this.audio) {
+      this.audio.volume = this.DEFAULT_VOLUME || 0.95;
     }
 
     // Switch to new track
@@ -596,9 +607,6 @@ class AudioEngine {
 
     if (this.audio) {
       this.audio.loop = (this.playbackMode === 'loop');
-      try {
-        this.audio.volume = 0; // Prepare for silky micro fade-in
-      } catch {}
     }
 
     this._notify('trackChange', this.currentTrack);
@@ -616,23 +624,12 @@ class AudioEngine {
         console.log('[SVX Audio] CDN edge fallback to direct raw GitHub stream:', rawUrl);
         this.audio.src = rawUrl;
         this.audio.load();
-        this.audio.play().then(() => {
-          if (fadeInDuration > 0) {
-            this.fadeIn(fadeInDuration);
-          } else if (this.audio) {
-            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
-          }
-        }).catch(() => {});
+        this.audio.play().catch(() => {});
       }
     };
 
     try {
       await this.audio.play();
-      if (fadeInDuration > 0) {
-        this.fadeIn(fadeInDuration);
-      } else if (this.audio) {
-        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
-      }
     } catch (err) {
       console.warn('[SVX Audio] Play request prevented by browser autoplay policy:', err);
       this._isPlaying = false;
@@ -641,8 +638,9 @@ class AudioEngine {
   }
 
   pause(immediate = false) {
-    if (immediate) {
+    if (immediate || (typeof document !== 'undefined' && document.hidden)) {
       clearInterval(this._fadeTimer);
+      this._fadeTimer = null;
       if (this.audio) {
         try { this.audio.pause(); } catch {}
         this.audio.volume = this.DEFAULT_VOLUME || 0.95;
@@ -677,10 +675,9 @@ class AudioEngine {
   async togglePlayPause(url, metadata = {}) {
     if (this.currentTrack && this.currentTrack.url === url) {
       if (this._isPlaying) {
-        await this.fadeOut(200);
+        this.pause();
       } else {
         await this.audio.play();
-        this.fadeIn(200);
       }
     } else {
       await this.play(url, metadata);
@@ -732,8 +729,9 @@ class AudioEngine {
 
     const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
 
-    // Gentle 6-second soft decay so sleep is never abruptly interrupted
-    if (remainingSeconds <= 6 && !this._isSleepFading && this._isPlaying && this.audio) {
+    // Gentle 6-second soft decay so sleep is never abruptly interrupted (foreground only, never blocks background)
+    const isBackgrounded = typeof document !== 'undefined' && document.hidden;
+    if (remainingSeconds <= 6 && !isBackgrounded && !this._isSleepFading && this._isPlaying && this.audio) {
       this._isSleepFading = true;
       this._fadeSleepTimer(remainingSeconds * 1000);
     }

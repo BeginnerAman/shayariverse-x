@@ -1097,8 +1097,8 @@ export class SVXMusicController {
     this.miniPlayBtn = document.getElementById('svx-mini-player-play-btn');
     this.miniNextBtn = document.getElementById('svx-mini-player-next-btn');
     this.miniCloseBtn = document.getElementById('svx-mini-player-close-btn');
-    this.miniSettingsBtn = document.getElementById('svx-mini-player-settings-btn') || document.getElementById('svx-mini-player-timer-btn');
     this.miniTimerBtn = document.getElementById('svx-mini-player-timer-btn');
+    this.miniSettingsBtn = document.getElementById('svx-mini-player-settings-btn');
     this.miniTrackArea = document.getElementById('svx-mini-player-track-area');
     this.miniBgPopup = document.getElementById('svx-mini-player-bg-popup');
     this.miniBgToggle = document.getElementById('svx-bg-audio-toggle');
@@ -1257,7 +1257,9 @@ export class SVXMusicController {
       toggleBgPopup();
     };
     this.miniTimerBtn?.addEventListener('click', openTimerPopup);
-    this.miniSettingsBtn?.addEventListener('click', openTimerPopup);
+    if (this.miniSettingsBtn && this.miniSettingsBtn !== this.miniTimerBtn) {
+      this.miniSettingsBtn.addEventListener('click', openTimerPopup);
+    }
 
     // Sleep Timer Presets (15m, 30m, 45m, 60m)
     this.sleepTimerChips.forEach(chip => {
@@ -3530,8 +3532,6 @@ export class SVXReelsController {
           audioEngine.play(shayari.song_url, {
             name: shayari.song_name || 'Shayari BGM',
             artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
-          }, {
-            fadeInMs: 120
           }).catch(() => {});
           showToast("Music playing", "Volume2", 1500);
         }
@@ -3591,9 +3591,6 @@ export class SVXReelsController {
         audioEngine.play(shayari.song_url, {
           name: shayari.song_name || 'Shayari BGM',
           artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
-        }, {
-          fadeOutMs: 60,
-          fadeInMs: 120
         }).catch(err => {
           console.warn('[SVX Reels] Autoplay blocked by browser policy:', err);
         });
@@ -3642,9 +3639,6 @@ export class SVXReelsController {
         audioEngine.play(shayari.song_url, {
           name: shayari.song_name || 'Shayari BGM',
           artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
-        }, {
-          fadeOutMs: 60,
-          fadeInMs: 120
         }).catch(() => {});
       }
     }
