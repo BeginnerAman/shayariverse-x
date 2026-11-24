@@ -3506,6 +3506,8 @@ export class SVXReelsController {
           audioEngine.play(shayari.song_url, {
             name: shayari.song_name || 'Shayari BGM',
             artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
+          }, {
+            fadeInMs: 120
           }).catch(() => {});
           showToast("Music playing", "Volume2", 1500);
         }
@@ -3536,6 +3538,18 @@ export class SVXReelsController {
 
     slide.classList.add('active-slide');
 
+    // Continuous Playback: If next slide shares the exact same song and it's already streaming, keep playing!
+    const currentTrack = audioEngine.getCurrentTrack();
+    if (currentTrack?.url && currentTrack.url === shayari.song_url && audioEngine.isPlaying() && !this.isMuted) {
+      clearTimeout(this._audioPlayTimeout);
+      this._audioPlayTimeout = null;
+      const vinyl = slide.querySelector('.svx-vinyl-disc');
+      const musicPill = slide.querySelector('.svx-reel-music-pill');
+      vinyl?.classList.add('spinning');
+      musicPill?.classList.remove('muted');
+      return;
+    }
+
     // Debounce audio playback slightly so smooth scroll settling is instantaneous and fluid
     clearTimeout(this._audioPlayTimeout);
     this._audioPlayTimeout = setTimeout(() => {
@@ -3553,6 +3567,9 @@ export class SVXReelsController {
         audioEngine.play(shayari.song_url, {
           name: shayari.song_name || 'Shayari BGM',
           artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
+        }, {
+          fadeOutMs: 60,
+          fadeInMs: 120
         }).catch(err => {
           console.warn('[SVX Reels] Autoplay blocked by browser policy:', err);
         });
@@ -3562,7 +3579,7 @@ export class SVXReelsController {
           audioEngine.pause(true);
         }
       }
-    }, 120);
+    }, 100);
   }
 
   pause() {
@@ -3601,6 +3618,9 @@ export class SVXReelsController {
         audioEngine.play(shayari.song_url, {
           name: shayari.song_name || 'Shayari BGM',
           artist: shayari.song_artist || shayari.author_name || 'Viral Audio'
+        }, {
+          fadeOutMs: 60,
+          fadeInMs: 120
         }).catch(() => {});
       }
     }

@@ -525,8 +525,11 @@ class AudioEngine {
     // Reset fallback retry flag for each new play attempt
     this._retriedRaw = false;
 
-    // If same track is already loaded and paused, resume smoothly
+    // If same track is already loaded:
     if (this.currentTrack && this.currentTrack.url === url) {
+      if (this._isPlaying && this.audio && !this.audio.paused) {
+        return; // Continuous playback without stutter
+      }
       try {
         this._isSleepFading = false;
         clearInterval(this._fadeTimer);
@@ -535,7 +538,8 @@ class AudioEngine {
           this._sleepFadeTimer = null;
         }
         await this.audio.play();
-        this.fadeIn(200);
+        const resumeFadeIn = typeof options.fadeInMs === 'number' ? options.fadeInMs : 200;
+        this.fadeIn(resumeFadeIn);
         return;
       } catch (err) {
         console.warn('[SVX Audio] Resume failed, re-loading track:', err);
@@ -545,10 +549,20 @@ class AudioEngine {
     // Monotonic request counter to prevent race conditions during rapid skipping
     const reqId = ++this._playRequestId;
 
-    // Smooth 180ms micro fade-out of old track if currently playing
+    const fadeOutDuration = typeof options.fadeOutMs === 'number' ? options.fadeOutMs : 180;
+    const fadeInDuration = typeof options.fadeInMs === 'number' ? options.fadeInMs : 220;
+
+    // Smooth micro fade-out of old track if currently playing
     if (this._isPlaying && this.audio && !this.audio.paused && !options.immediate) {
-      await this.fadeOut(180);
-      if (reqId !== this._playRequestId) return; // Superseded by a newer play request
+      if (fadeOutDuration > 0) {
+        await this.fadeOut(fadeOutDuration);
+        if (reqId !== this._playRequestId) return; // Superseded by a newer play request
+      } else {
+        clearInterval(this._fadeTimer);
+        if (this.audio) {
+          try { this.audio.pause(); } catch {}
+        }
+      }
     } else {
       clearInterval(this._fadeTimer);
       if (this.audio) {
@@ -583,7 +597,7 @@ class AudioEngine {
     if (this.audio) {
       this.audio.loop = (this.playbackMode === 'loop');
       try {
-        this.audio.volume = 0; // Prepare for silky 220ms micro fade-in
+        this.audio.volume = 0; // Prepare for silky micro fade-in
       } catch {}
     }
 
@@ -603,14 +617,22 @@ class AudioEngine {
         this.audio.src = rawUrl;
         this.audio.load();
         this.audio.play().then(() => {
-          this.fadeIn(220);
+          if (fadeInDuration > 0) {
+            this.fadeIn(fadeInDuration);
+          } else if (this.audio) {
+            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          }
         }).catch(() => {});
       }
     };
 
     try {
       await this.audio.play();
-      this.fadeIn(220);
+      if (fadeInDuration > 0) {
+        this.fadeIn(fadeInDuration);
+      } else if (this.audio) {
+        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+      }
     } catch (err) {
       console.warn('[SVX Audio] Play request prevented by browser autoplay policy:', err);
       this._isPlaying = false;
