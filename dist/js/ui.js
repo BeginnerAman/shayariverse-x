@@ -970,6 +970,7 @@ export class SVXFeedController {
         const songArtist = pill?.querySelector('.svx-song-artist')?.textContent;
 
         if (songUrl) {
+          audioEngine.setPlaybackMode('loop');
           audioEngine.togglePlayPause(songUrl, { name: songTitle, artist: songArtist, source: 'post' });
         }
       } else if (action === 'like' && shayariId) {
@@ -2870,6 +2871,7 @@ export class SVXProfileController {
         const songTitle = pill?.querySelector('.svx-song-title')?.textContent;
         const songArtist = pill?.querySelector('.svx-song-artist')?.textContent;
         if (songUrl) {
+          audioEngine.setPlaybackMode('loop');
           audioEngine.togglePlayPause(songUrl, { name: songTitle, artist: songArtist, source: 'post' });
         }
       } else if (action === 'like' && shayariId) {
@@ -3534,6 +3536,8 @@ export class SVXReelsController {
             name: shayari.song_name || 'Shayari BGM',
             artist: shayari.song_artist || shayari.author_name || 'Viral Audio',
             source: 'reel'
+          }).then(() => {
+            if (audioEngine.audio) audioEngine.audio.loop = true;
           }).catch(() => {});
           showToast("Music playing", "Volume2", 1500);
         }
@@ -3573,6 +3577,7 @@ export class SVXReelsController {
       const musicPill = slide.querySelector('.svx-reel-music-pill');
       vinyl?.classList.add('spinning');
       musicPill?.classList.remove('muted');
+      if (audioEngine.audio) audioEngine.audio.loop = true;
       return;
     }
 
@@ -3594,6 +3599,8 @@ export class SVXReelsController {
           name: shayari.song_name || 'Shayari BGM',
           artist: shayari.song_artist || shayari.author_name || 'Viral Audio',
           source: 'reel'
+        }).then(() => {
+          if (audioEngine.audio) audioEngine.audio.loop = true;
         }).catch(err => {
           console.warn('[SVX Reels] Autoplay blocked by browser policy:', err);
         });
@@ -3655,9 +3662,17 @@ export class SVXReelsController {
             name: shayari.song_name || 'Shayari BGM',
             artist: shayari.song_artist || shayari.author_name || 'Viral Audio',
             source: 'reel'
+          }).then(() => {
+            if (audioEngine.audio) audioEngine.audio.loop = true;
           }).catch(() => {});
+        } else {
+          audioEngine.pause(true);
         }
+      } else {
+        audioEngine.pause(true);
       }
+    } else {
+      audioEngine.pause(true);
     }
   }
 
@@ -3783,6 +3798,8 @@ export class SVXRouter {
     if (viewName !== 'reels') {
       this.reelsController?.pause();
     } else {
+      // Immediately stop any Feed or Discover audio before entering Reels
+      audioEngine.pause(true);
       this.reelsController?.resume();
     }
 
