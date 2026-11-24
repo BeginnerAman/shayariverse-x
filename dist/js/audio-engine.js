@@ -21,6 +21,8 @@ class AudioEngine {
     this._isPlaying = false;
     this._curatedCache = null;
     this._fadeTimer = null;
+    this._sleepFadeTimer = null;
+    this._playRequestId = 0;
     this._mediaSessionWired = false;
     this._nativeMediaActionsWired = false;
     this._wakeLock = null;
@@ -404,29 +406,41 @@ class AudioEngine {
 
   /**
    * Smoothly fades out audio volume before pausing (prevents abrupt click/cut)
-   * @param {number} durationMs - Duration in ms (default 350ms)
+   * @param {number} durationMs - Duration in ms (default 200ms)
    * @returns {Promise<void>}
    */
-  async fadeOut(durationMs = 350) {
+  async fadeOut(durationMs = 200) {
     if (!this._isPlaying || !this.audio || !this.audio.pause) {
-      this.pause(true);
+      if (this.audio) {
+        try { this.audio.pause(); } catch {}
+      }
       return;
     }
 
     clearInterval(this._fadeTimer);
-    const startVolume = this.audio.volume || 1;
-    const steps = 14;
+    const startVolume = this.audio.volume || this.DEFAULT_VOLUME || 0.95;
+    const steps = 10;
     const stepTime = Math.max(10, Math.floor(durationMs / steps));
     const volumeStep = startVolume / steps;
 
     return new Promise((resolve) => {
       this._fadeTimer = setInterval(() => {
-        if (this.audio.volume > volumeStep) {
-          this.audio.volume = Math.max(0, this.audio.volume - volumeStep);
-        } else {
+        try {
+          if (this.audio && this.audio.volume > volumeStep) {
+            this.audio.volume = Math.max(0, this.audio.volume - volumeStep);
+          } else {
+            clearInterval(this._fadeTimer);
+            this._fadeTimer = null;
+            if (this.audio) {
+              this.audio.volume = 0;
+              try { this.audio.pause(); } catch {}
+              this.audio.volume = this.DEFAULT_VOLUME || 0.95; // restore base volume
+            }
+            resolve();
+          }
+        } catch {
           clearInterval(this._fadeTimer);
-          this.audio.pause();
-          this.audio.volume = startVolume; // restore base volume for next playback
+          this._fadeTimer = null;
           resolve();
         }
       }, stepTime);
@@ -435,23 +449,33 @@ class AudioEngine {
 
   /**
    * Smoothly fades in audio volume on start/resume
-   * @param {number} durationMs - Duration in ms (default 250ms)
+   * @param {number} durationMs - Duration in ms (default 220ms)
    */
-  fadeIn(durationMs = 250) {
+  fadeIn(durationMs = 220) {
     if (!this.audio) return;
     clearInterval(this._fadeTimer);
     const targetVolume = this.DEFAULT_VOLUME || 0.95;
-    this.audio.volume = 0;
-    const steps = 12;
+    try {
+      this.audio.volume = 0;
+    } catch {}
+    const steps = 11;
     const stepTime = Math.max(10, Math.floor(durationMs / steps));
     const volumeStep = targetVolume / steps;
 
     this._fadeTimer = setInterval(() => {
-      if (this.audio.volume + volumeStep < targetVolume) {
-        this.audio.volume = Math.min(targetVolume, this.audio.volume + volumeStep);
-      } else {
-        this.audio.volume = targetVolume;
+      try {
+        if (this.audio && this.audio.volume + volumeStep < targetVolume) {
+          this.audio.volume = Math.min(targetVolume, this.audio.volume + volumeStep);
+        } else {
+          if (this.audio) {
+            this.audio.volume = targetVolume;
+          }
+          clearInterval(this._fadeTimer);
+          this._fadeTimer = null;
+        }
+      } catch {
         clearInterval(this._fadeTimer);
+        this._fadeTimer = null;
       }
     }, stepTime);
   }
@@ -477,16 +501,19 @@ class AudioEngine {
       try {
         this._isSleepFading = false;
         clearInterval(this._fadeTimer);
-        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+        if (this._sleepFadeTimer) {
+          clearInterval(this._sleepFadeTimer);
+          this._sleepFadeTimer = null;
+        }
         await this.audio.play();
-        this.fadeIn();
+        this.fadeIn(200);
       } catch (err) {
         console.warn('[SVX Audio] Resume error:', err);
       }
     }
   }
 
-  async play(url, metadata = {}) {
+  async play(url, metadata = {}, options = {}) {
     if (!url) {
       if (this.currentTrack) {
         return this.resume();
@@ -498,29 +525,43 @@ class AudioEngine {
     // Reset fallback retry flag for each new play attempt
     this._retriedRaw = false;
 
-    // If same track is already loaded and paused, resume immediately
+    // If same track is already loaded and paused, resume smoothly
     if (this.currentTrack && this.currentTrack.url === url) {
       try {
         this._isSleepFading = false;
         clearInterval(this._fadeTimer);
-        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+        if (this._sleepFadeTimer) {
+          clearInterval(this._sleepFadeTimer);
+          this._sleepFadeTimer = null;
+        }
         await this.audio.play();
+        this.fadeIn(200);
         return;
       } catch (err) {
         console.warn('[SVX Audio] Resume failed, re-loading track:', err);
       }
     }
 
-    // If another track was currently playing, stop it immediately without blocking delay
-    this._isSleepFading = false;
-    clearInterval(this._fadeTimer);
-    if (this._isPlaying && this.audio) {
-      try {
-        this.audio.pause();
-      } catch {}
+    // Monotonic request counter to prevent race conditions during rapid skipping
+    const reqId = ++this._playRequestId;
+
+    // Smooth 180ms micro fade-out of old track if currently playing
+    if (this._isPlaying && this.audio && !this.audio.paused && !options.immediate) {
+      await this.fadeOut(180);
+      if (reqId !== this._playRequestId) return; // Superseded by a newer play request
+    } else {
+      clearInterval(this._fadeTimer);
+      if (this.audio) {
+        try { this.audio.pause(); } catch {}
+      }
     }
-    if (this.audio) {
-      this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+
+    if (this._isSleepFading) {
+      this._isSleepFading = false;
+      if (this._sleepFadeTimer) {
+        clearInterval(this._sleepFadeTimer);
+        this._sleepFadeTimer = null;
+      }
     }
 
     // Switch to new track
@@ -541,6 +582,9 @@ class AudioEngine {
 
     if (this.audio) {
       this.audio.loop = (this.playbackMode === 'loop');
+      try {
+        this.audio.volume = 0; // Prepare for silky 220ms micro fade-in
+      } catch {}
     }
 
     this._notify('trackChange', this.currentTrack);
@@ -558,12 +602,15 @@ class AudioEngine {
         console.log('[SVX Audio] CDN edge fallback to direct raw GitHub stream:', rawUrl);
         this.audio.src = rawUrl;
         this.audio.load();
-        this.audio.play().catch(() => {});
+        this.audio.play().then(() => {
+          this.fadeIn(220);
+        }).catch(() => {});
       }
     };
 
     try {
       await this.audio.play();
+      this.fadeIn(220);
     } catch (err) {
       console.warn('[SVX Audio] Play request prevented by browser autoplay policy:', err);
       this._isPlaying = false;
@@ -574,17 +621,27 @@ class AudioEngine {
   pause(immediate = false) {
     if (immediate) {
       clearInterval(this._fadeTimer);
-      this.audio.pause();
+      if (this.audio) {
+        try { this.audio.pause(); } catch {}
+        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+      }
       return;
     }
-    this.fadeOut();
+    this.fadeOut(200);
   }
 
   stop() {
     clearInterval(this._fadeTimer);
+    this._fadeTimer = null;
+    if (this._sleepFadeTimer) {
+      clearInterval(this._sleepFadeTimer);
+      this._sleepFadeTimer = null;
+    }
+    this._isSleepFading = false;
     if (this.audio) {
       this.audio.pause();
       this.audio.currentTime = 0;
+      this.audio.volume = this.DEFAULT_VOLUME || 0.95;
     }
     this._isPlaying = false;
     this._releaseWakeLock();
@@ -598,10 +655,10 @@ class AudioEngine {
   async togglePlayPause(url, metadata = {}) {
     if (this.currentTrack && this.currentTrack.url === url) {
       if (this._isPlaying) {
-        await this.fadeOut();
+        await this.fadeOut(200);
       } else {
         await this.audio.play();
-        this.fadeIn();
+        this.fadeIn(200);
       }
     } else {
       await this.play(url, metadata);
@@ -612,7 +669,7 @@ class AudioEngine {
 
   /**
    * Sets the audio sleep timer for a specified duration in minutes.
-   * Automatically executes a 15-second soft fade-out before pausing.
+   * Automatically executes a gentle 6-second soft decay before pausing.
    * @param {number} minutes - Duration in minutes (e.g. 15, 30, 45, 60 or custom)
    */
   setSleepTimer(minutes) {
@@ -630,7 +687,7 @@ class AudioEngine {
       this._tickSleepTimer();
     }, 1000);
 
-    console.log(`[SVX Audio] Sleep timer set for ${mins}m`);
+    console.log(`[SVX Audio] Sleep timer set for ${mins}m with 6s gentle soft decay`);
   }
 
   _tickSleepTimer() {
@@ -642,15 +699,18 @@ class AudioEngine {
       console.log('[SVX Audio] Sleep timer finished. Gracefully pausing playback...');
       this.clearSleepTimer();
       this.pause(true);
+      if (this.audio) {
+        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+      }
       return;
     }
 
     const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
 
-    // Gentle 15-second soft fade-out so sleep is never abruptly interrupted
-    if (remainingSeconds <= 15 && !this._isSleepFading && this._isPlaying && this.audio) {
+    // Gentle 6-second soft decay so sleep is never abruptly interrupted
+    if (remainingSeconds <= 6 && !this._isSleepFading && this._isPlaying && this.audio) {
       this._isSleepFading = true;
-      this.fadeOut(remainingSeconds * 1000);
+      this._fadeSleepTimer(remainingSeconds * 1000);
     }
 
     this._notify('sleepTimerUpdate', {
@@ -659,6 +719,36 @@ class AudioEngine {
       remainingSeconds,
       remainingText: this._formatSleepRemaining(remainingSeconds)
     });
+  }
+
+  _fadeSleepTimer(durationMs) {
+    if (this._sleepFadeTimer) {
+      clearInterval(this._sleepFadeTimer);
+      this._sleepFadeTimer = null;
+    }
+    if (!this.audio || !this._isPlaying) return;
+
+    const startVolume = this.audio.volume || this.DEFAULT_VOLUME || 0.95;
+    const steps = 24; // 24 smooth steps over 6 seconds
+    const stepTime = Math.max(40, Math.floor(durationMs / steps));
+    const volumeStep = startVolume / steps;
+
+    this._sleepFadeTimer = setInterval(() => {
+      try {
+        if (this.audio && this.audio.volume > volumeStep) {
+          this.audio.volume = Math.max(0, this.audio.volume - volumeStep);
+        } else {
+          clearInterval(this._sleepFadeTimer);
+          this._sleepFadeTimer = null;
+          if (this.audio) {
+            this.audio.volume = 0;
+          }
+        }
+      } catch {
+        clearInterval(this._sleepFadeTimer);
+        this._sleepFadeTimer = null;
+      }
+    }, stepTime);
   }
 
   _formatSleepRemaining(totalSeconds) {
@@ -677,9 +767,18 @@ class AudioEngine {
       clearInterval(this._sleepTimerInterval);
       this._sleepTimerInterval = null;
     }
+    if (this._sleepFadeTimer) {
+      clearInterval(this._sleepFadeTimer);
+      this._sleepFadeTimer = null;
+    }
     const hadTimer = this._sleepTimerEndTime > 0;
     this._sleepTimerEndTime = 0;
     this._sleepTimerDuration = 0;
+    if (this._isSleepFading && this.audio) {
+      try {
+        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+      } catch {}
+    }
     this._isSleepFading = false;
 
     if (hadTimer) {
