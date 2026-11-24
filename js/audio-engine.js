@@ -690,14 +690,17 @@ class AudioEngine {
   // --- Audio Sleep Timer Engine (Smart Battery & Gentle Sleep) ---
 
   /**
-   * Sets the audio sleep timer for a specified duration in minutes.
+   * Sets the audio sleep timer for a specified duration in minutes (clamped between 1m and 720m / 12h).
    * Automatically executes a gentle 6-second soft decay before pausing.
-   * @param {number} minutes - Duration in minutes (e.g. 15, 30, 45, 60 or custom)
+   * @param {number} minutes - Duration in minutes (1 to 720)
    */
   setSleepTimer(minutes) {
     this.clearSleepTimer();
-    const mins = Number(minutes);
-    if (!mins || mins <= 0) return;
+    const parsed = Number(minutes);
+    if (!parsed || isNaN(parsed) || parsed <= 0) return;
+
+    // Hard boundary: minimum 1 minute, maximum 720 minutes (12 hours)
+    const mins = Math.max(1, Math.min(720, Math.round(parsed)));
 
     this._sleepTimerDuration = mins;
     this._sleepTimerEndTime = Date.now() + Math.round(mins * 60 * 1000);

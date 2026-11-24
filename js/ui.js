@@ -1271,14 +1271,36 @@ export class SVXMusicController {
       });
     });
 
-    // Custom Duration Stepper (-5m / +5m)
+    // Format minutes into human-readable text for toasts (e.g. 90m -> 1h 30m)
+    const formatDurationToast = (mins) => {
+      if (mins >= 60) {
+        const hrs = Math.floor(mins / 60);
+        const rem = mins % 60;
+        return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`;
+      }
+      return `${mins}m`;
+    };
+
+    // Live custom input validation (auto-clamp max 720m / 12 hours)
+    this.sleepTimerInput?.addEventListener('input', () => {
+      let val = parseInt(this.sleepTimerInput.value, 10);
+      if (isNaN(val)) return;
+      if (val > 720) {
+        this.sleepTimerInput.value = 720;
+        showToast('Maximum sleep timer is 12 hours (720m)', 'AlertCircle');
+      } else if (val < 0) {
+        this.sleepTimerInput.value = 1;
+      }
+    });
+
+    // Custom Duration Stepper (-5m / +5m) with 1m - 720m bounds
     this.sleepTimerMinusBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       let currentVal = parseInt(this.sleepTimerInput?.value, 10);
       if (isNaN(currentVal) || currentVal <= 5) {
-        currentVal = 5;
+        currentVal = 1;
       } else {
-        currentVal -= 5;
+        currentVal = Math.max(1, currentVal - 5);
       }
       if (this.sleepTimerInput) this.sleepTimerInput.value = currentVal;
     });
@@ -1289,21 +1311,23 @@ export class SVXMusicController {
       if (isNaN(currentVal) || currentVal <= 0) {
         currentVal = 15;
       } else {
-        currentVal += 5;
+        currentVal = Math.min(720, currentVal + 5);
       }
       if (this.sleepTimerInput) this.sleepTimerInput.value = currentVal;
     });
 
-    // Custom Start Button
+    // Custom Start Button (Strict 1m - 720m clamp)
     this.sleepTimerStartBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
-      const val = parseInt(this.sleepTimerInput?.value, 10);
-      if (val && val > 0) {
-        audioEngine.setSleepTimer(val);
-        showToast(`Sleep Timer set for ${val}m`, 'Moon');
-      } else {
-        showToast('Please enter minutes', 'AlertCircle');
+      const rawVal = parseInt(this.sleepTimerInput?.value, 10);
+      if (!rawVal || isNaN(rawVal) || rawVal <= 0) {
+        showToast('Please enter minutes (1 to 720m)', 'AlertCircle');
+        return;
       }
+      const val = Math.max(1, Math.min(720, rawVal));
+      if (this.sleepTimerInput) this.sleepTimerInput.value = val;
+      audioEngine.setSleepTimer(val);
+      showToast(`Sleep Timer set for ${formatDurationToast(val)}`, 'Moon');
     });
 
     // Cancel Sleep Timer
