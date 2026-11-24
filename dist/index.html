@@ -160,8 +160,10 @@
         <!-- Floating Discover Mini Music Bar (Sequential, Shuffle, Loop & Background Playback) -->
         <div id="svx-discover-mini-player" class="svx-discover-mini-player" style="display: none;" role="region" aria-label="Music Player Controls">
           
-          <!-- Background Audio Quick Settings Glass Popup (Triggered via Long-Press or Settings icon) -->
-          <div id="svx-mini-player-bg-popup" class="svx-bg-popup" style="display: none;" role="dialog" aria-label="Background Playback Settings">
+          <!-- Audio & Sleep Timer Glass Drawer (Triggered via Moon Button or Settings) -->
+          <div id="svx-mini-player-bg-popup" class="svx-bg-popup" style="display: none;" role="dialog" aria-label="Audio & Sleep Timer Settings">
+            
+            <!-- Section 1: Background Playback Toggle -->
             <div class="svx-bg-popup-header">
               <div class="svx-bg-popup-title-wrap">
                 <svg class="svx-icon svx-icon-xs" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
@@ -175,9 +177,55 @@
             <div class="svx-bg-popup-desc">
               Play music when app is minimized or screen is locked
             </div>
+
+            <div class="svx-popup-divider"></div>
+
+            <!-- Section 2: Audio Sleep Timer -->
+            <div class="svx-timer-header">
+              <div class="svx-bg-popup-title-wrap">
+                <svg class="svx-icon svx-icon-xs svx-timer-icon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/><path d="M19 3v4"/><path d="M21 5h-4"/></svg>
+                <span class="svx-bg-popup-title">Sleep Timer</span>
+              </div>
+              <span id="svx-sleep-timer-badge" class="svx-timer-badge">Off</span>
+            </div>
+
+            <!-- Active Countdown Row (Shown only when timer is ticking) -->
+            <div id="svx-sleep-timer-active-row" class="svx-timer-active-row" style="display: none;">
+              <div class="svx-timer-countdown-info">
+                <span class="svx-timer-pulse-dot"></span>
+                <span id="svx-sleep-timer-status-text" class="svx-timer-status-text">Audio stops in 30:00</span>
+              </div>
+              <button id="svx-sleep-timer-cancel-btn" class="svx-timer-cancel-btn" type="button">Turn Off</button>
+            </div>
+
+            <!-- 1-Tap Presets -->
+            <div class="svx-timer-presets">
+              <button class="svx-timer-chip" type="button" data-timer-mins="15">15m</button>
+              <button class="svx-timer-chip" type="button" data-timer-mins="30">30m</button>
+              <button class="svx-timer-chip" type="button" data-timer-mins="45">45m</button>
+              <button class="svx-timer-chip" type="button" data-timer-mins="60">60m</button>
+            </div>
+
+            <!-- Custom Stepper & Input -->
+            <div class="svx-timer-custom-row">
+              <div class="svx-timer-stepper">
+                <button id="svx-timer-minus-btn" class="svx-timer-step-btn" type="button" aria-label="Decrease 5 minutes">-5m</button>
+                <div class="svx-timer-input-box">
+                  <input id="svx-timer-custom-input" class="svx-timer-input" type="number" min="1" max="480" placeholder="Custom" aria-label="Custom Minutes">
+                  <span class="svx-timer-unit">min</span>
+                </div>
+                <button id="svx-timer-plus-btn" class="svx-timer-step-btn" type="button" aria-label="Increase 5 minutes">+5m</button>
+              </div>
+              <button id="svx-timer-start-btn" class="svx-timer-start-btn" type="button">Start</button>
+            </div>
+
+            <div class="svx-timer-note">
+              Music will softly fade out over 15 seconds before pausing.
+            </div>
+
           </div>
 
-          <div id="svx-mini-player-track-area" class="svx-mini-player-track" title="Hold for background audio settings">
+          <div id="svx-mini-player-track-area" class="svx-mini-player-track" title="Hold for audio and sleep timer settings">
             <div id="svx-mini-player-art" class="svx-mini-player-art" aria-hidden="true">
               <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></svg>
             </div>
@@ -188,9 +236,10 @@
           </div>
 
           <div class="svx-mini-player-controls">
-            <!-- Background Audio Settings Shortcut -->
-            <button id="svx-mini-player-settings-btn" class="svx-mini-btn" type="button" aria-label="Background Audio Settings" title="Background Audio Settings">
-              <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+            <!-- Audio Sleep Timer Moon Button -->
+            <button id="svx-mini-player-timer-btn" class="svx-mini-btn" type="button" aria-label="Audio Sleep Timer" title="Audio Sleep Timer">
+              <svg class="svx-icon svx-icon-sm" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/><path d="M19 3v4"/><path d="M21 5h-4"/></svg>
+              <span id="svx-mini-timer-dot" class="svx-mini-timer-dot" style="display: none;"></span>
             </button>
 
             <!-- Mode Toggle Button (Loop, Sequential, Shuffle) -->

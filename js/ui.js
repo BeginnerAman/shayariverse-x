@@ -47,7 +47,8 @@ export const ICONS = {
   SkipForward: `<svg class="svx-icon" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>`,
   Film: `<svg class="svx-icon" viewBox="0 0 24 24"><rect width="20" height="15" x="2" y="4.5" rx="3"/><polygon points="10 8.5 15 12 10 15.5" fill="currentColor"/></svg>`,
   RefreshCw: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>`,
-  PenLine: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`
+  PenLine: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
+  Moon: `<svg class="svx-icon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`
 };
 
 /**
@@ -1096,10 +1097,23 @@ export class SVXMusicController {
     this.miniPlayBtn = document.getElementById('svx-mini-player-play-btn');
     this.miniNextBtn = document.getElementById('svx-mini-player-next-btn');
     this.miniCloseBtn = document.getElementById('svx-mini-player-close-btn');
-    this.miniSettingsBtn = document.getElementById('svx-mini-player-settings-btn');
+    this.miniSettingsBtn = document.getElementById('svx-mini-player-settings-btn') || document.getElementById('svx-mini-player-timer-btn');
+    this.miniTimerBtn = document.getElementById('svx-mini-player-timer-btn');
     this.miniTrackArea = document.getElementById('svx-mini-player-track-area');
     this.miniBgPopup = document.getElementById('svx-mini-player-bg-popup');
     this.miniBgToggle = document.getElementById('svx-bg-audio-toggle');
+
+    // Sleep Timer Controls
+    this.sleepTimerBadge = document.getElementById('svx-sleep-timer-badge');
+    this.sleepTimerActiveRow = document.getElementById('svx-sleep-timer-active-row');
+    this.sleepTimerStatusText = document.getElementById('svx-sleep-timer-status-text');
+    this.sleepTimerCancelBtn = document.getElementById('svx-sleep-timer-cancel-btn');
+    this.sleepTimerChips = document.querySelectorAll('.svx-timer-chip');
+    this.sleepTimerMinusBtn = document.getElementById('svx-timer-minus-btn');
+    this.sleepTimerPlusBtn = document.getElementById('svx-timer-plus-btn');
+    this.sleepTimerInput = document.getElementById('svx-timer-custom-input');
+    this.sleepTimerStartBtn = document.getElementById('svx-timer-start-btn');
+    this.miniTimerDot = document.getElementById('svx-mini-timer-dot');
 
     this.init();
   }
@@ -1237,10 +1251,71 @@ export class SVXMusicController {
       });
     }
 
-    // Direct Settings icon tap
-    this.miniSettingsBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
+    // Direct Settings / Timer icon tap
+    const openTimerPopup = (e) => {
+      e?.stopPropagation();
       toggleBgPopup();
+    };
+    this.miniTimerBtn?.addEventListener('click', openTimerPopup);
+    this.miniSettingsBtn?.addEventListener('click', openTimerPopup);
+
+    // Sleep Timer Presets (15m, 30m, 45m, 60m)
+    this.sleepTimerChips.forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const mins = Number(chip.getAttribute('data-timer-mins'));
+        if (mins) {
+          audioEngine.setSleepTimer(mins);
+          showToast(`Sleep Timer set for ${mins}m`, 'Moon');
+        }
+      });
+    });
+
+    // Custom Duration Stepper (-5m / +5m)
+    this.sleepTimerMinusBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      let currentVal = parseInt(this.sleepTimerInput?.value, 10);
+      if (isNaN(currentVal) || currentVal <= 5) {
+        currentVal = 5;
+      } else {
+        currentVal -= 5;
+      }
+      if (this.sleepTimerInput) this.sleepTimerInput.value = currentVal;
+    });
+
+    this.sleepTimerPlusBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      let currentVal = parseInt(this.sleepTimerInput?.value, 10);
+      if (isNaN(currentVal) || currentVal <= 0) {
+        currentVal = 15;
+      } else {
+        currentVal += 5;
+      }
+      if (this.sleepTimerInput) this.sleepTimerInput.value = currentVal;
+    });
+
+    // Custom Start Button
+    this.sleepTimerStartBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const val = parseInt(this.sleepTimerInput?.value, 10);
+      if (val && val > 0) {
+        audioEngine.setSleepTimer(val);
+        showToast(`Sleep Timer set for ${val}m`, 'Moon');
+      } else {
+        showToast('Please enter minutes', 'AlertCircle');
+      }
+    });
+
+    // Cancel Sleep Timer
+    this.sleepTimerCancelBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      audioEngine.clearSleepTimer();
+      showToast('Sleep Timer cancelled', 'Moon');
+    });
+
+    // Listen for live Sleep Timer ticks & state updates
+    audioEngine.onSleepTimerUpdate((timerState) => {
+      this.updateSleepTimerUI(timerState);
     });
 
     // Long-Press gesture on track area (~500ms)
@@ -1286,7 +1361,7 @@ export class SVXMusicController {
     // Outside click dismisses the popup
     document.addEventListener('pointerdown', (e) => {
       if (this.miniBgPopup && this.miniBgPopup.style.display !== 'none') {
-        if (!this.miniBgPopup.contains(e.target) && !this.miniSettingsBtn?.contains(e.target)) {
+        if (!this.miniBgPopup.contains(e.target) && !this.miniSettingsBtn?.contains(e.target) && !this.miniTimerBtn?.contains(e.target)) {
           this.miniBgPopup.style.display = 'none';
         }
       }
@@ -1341,6 +1416,51 @@ export class SVXMusicController {
     if (this.miniPlayBtn) {
       this.miniPlayBtn.innerHTML = renderIcon(isPlaying ? 'Pause' : 'Play', 'svx-icon-sm');
     }
+  }
+
+  updateSleepTimerUI(timerState) {
+    const { active, durationMinutes, remainingSeconds, remainingText } = timerState || {};
+
+    if (this.miniTimerBtn) {
+      if (active) {
+        this.miniTimerBtn.classList.add('active-timer');
+        this.miniTimerBtn.setAttribute('title', `Sleep timer: ${remainingText} left`);
+      } else {
+        this.miniTimerBtn.classList.remove('active-timer');
+        this.miniTimerBtn.setAttribute('title', 'Audio Sleep Timer');
+      }
+    }
+
+    if (this.miniTimerDot) {
+      this.miniTimerDot.style.display = active ? 'block' : 'none';
+    }
+
+    if (this.sleepTimerBadge) {
+      if (active) {
+        this.sleepTimerBadge.classList.add('active');
+        this.sleepTimerBadge.textContent = `${remainingText} left`;
+      } else {
+        this.sleepTimerBadge.classList.remove('active');
+        this.sleepTimerBadge.textContent = 'Off';
+      }
+    }
+
+    if (this.sleepTimerActiveRow) {
+      this.sleepTimerActiveRow.style.display = active ? 'flex' : 'none';
+    }
+
+    if (this.sleepTimerStatusText && active) {
+      this.sleepTimerStatusText.textContent = `Audio stops in ${remainingText}`;
+    }
+
+    this.sleepTimerChips?.forEach(chip => {
+      const chipMins = Number(chip.getAttribute('data-timer-mins'));
+      if (active && durationMinutes === chipMins) {
+        chip.classList.add('active');
+      } else {
+        chip.classList.remove('active');
+      }
+    });
   }
 
   switchTab(tab) {

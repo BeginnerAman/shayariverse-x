@@ -26,6 +26,12 @@ class AudioEngine {
     this._wakeLock = null;
     this.DEFAULT_VOLUME = 0.95;
 
+    // Sleep Timer state
+    this._sleepTimerDuration = 0; // in minutes
+    this._sleepTimerEndTime = 0;  // timestamp ms
+    this._sleepTimerInterval = null;
+    this._isSleepFading = false;
+
     // Background playback preference (persisted in localStorage, defaults to true)
     let storedBg = null;
     try {
@@ -39,6 +45,7 @@ class AudioEngine {
       timeUpdate: new Set(),
       modeChange: new Set(),
       bgPlaybackChange: new Set(),
+      sleepTimerUpdate: new Set(),
       error: new Set()
     };
 
@@ -468,6 +475,9 @@ class AudioEngine {
   async resume() {
     if (this.audio && this.currentTrack) {
       try {
+        this._isSleepFading = false;
+        clearInterval(this._fadeTimer);
+        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
         await this.audio.play();
         this.fadeIn();
       } catch (err) {
@@ -491,6 +501,7 @@ class AudioEngine {
     // If same track is already loaded and paused, resume immediately
     if (this.currentTrack && this.currentTrack.url === url) {
       try {
+        this._isSleepFading = false;
         clearInterval(this._fadeTimer);
         this.audio.volume = this.DEFAULT_VOLUME || 0.95;
         await this.audio.play();
@@ -501,6 +512,7 @@ class AudioEngine {
     }
 
     // If another track was currently playing, stop it immediately without blocking delay
+    this._isSleepFading = false;
     clearInterval(this._fadeTimer);
     if (this._isPlaying && this.audio) {
       try {
@@ -575,7 +587,6 @@ class AudioEngine {
       this.audio.currentTime = 0;
     }
     this._isPlaying = false;
-    this._stopAudioKeepAlive();
     this._releaseWakeLock();
     const nativeMS = this._getNativeMediaSession();
     if (nativeMS) {
@@ -595,6 +606,111 @@ class AudioEngine {
     } else {
       await this.play(url, metadata);
     }
+  }
+
+  // --- Audio Sleep Timer Engine (Smart Battery & Gentle Sleep) ---
+
+  /**
+   * Sets the audio sleep timer for a specified duration in minutes.
+   * Automatically executes a 15-second soft fade-out before pausing.
+   * @param {number} minutes - Duration in minutes (e.g. 15, 30, 45, 60 or custom)
+   */
+  setSleepTimer(minutes) {
+    this.clearSleepTimer();
+    const mins = Number(minutes);
+    if (!mins || mins <= 0) return;
+
+    this._sleepTimerDuration = mins;
+    this._sleepTimerEndTime = Date.now() + Math.round(mins * 60 * 1000);
+    this._isSleepFading = false;
+
+    this._tickSleepTimer();
+
+    this._sleepTimerInterval = setInterval(() => {
+      this._tickSleepTimer();
+    }, 1000);
+
+    console.log(`[SVX Audio] Sleep timer set for ${mins}m`);
+  }
+
+  _tickSleepTimer() {
+    if (!this._sleepTimerEndTime) return;
+    const now = Date.now();
+    const remainingMs = this._sleepTimerEndTime - now;
+
+    if (remainingMs <= 0) {
+      console.log('[SVX Audio] Sleep timer finished. Gracefully pausing playback...');
+      this.clearSleepTimer();
+      this.pause(true);
+      return;
+    }
+
+    const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+
+    // Gentle 15-second soft fade-out so sleep is never abruptly interrupted
+    if (remainingSeconds <= 15 && !this._isSleepFading && this._isPlaying && this.audio) {
+      this._isSleepFading = true;
+      this.fadeOut(remainingSeconds * 1000);
+    }
+
+    this._notify('sleepTimerUpdate', {
+      active: true,
+      durationMinutes: this._sleepTimerDuration,
+      remainingSeconds,
+      remainingText: this._formatSleepRemaining(remainingSeconds)
+    });
+  }
+
+  _formatSleepRemaining(totalSeconds) {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    if (mins >= 60) {
+      const hrs = Math.floor(mins / 60);
+      const remMins = mins % 60;
+      return `${hrs}h ${remMins}m`;
+    }
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  }
+
+  clearSleepTimer() {
+    if (this._sleepTimerInterval) {
+      clearInterval(this._sleepTimerInterval);
+      this._sleepTimerInterval = null;
+    }
+    const hadTimer = this._sleepTimerEndTime > 0;
+    this._sleepTimerEndTime = 0;
+    this._sleepTimerDuration = 0;
+    this._isSleepFading = false;
+
+    if (hadTimer) {
+      console.log('[SVX Audio] Sleep timer cleared.');
+      this._notify('sleepTimerUpdate', {
+        active: false,
+        durationMinutes: 0,
+        remainingSeconds: 0,
+        remainingText: ''
+      });
+    }
+  }
+
+  getSleepTimerState() {
+    if (!this._sleepTimerEndTime) {
+      return { active: false, durationMinutes: 0, remainingSeconds: 0, remainingText: '' };
+    }
+    const remainingSeconds = Math.max(0, Math.ceil((this._sleepTimerEndTime - Date.now()) / 1000));
+    return {
+      active: true,
+      durationMinutes: this._sleepTimerDuration,
+      remainingSeconds,
+      remainingText: this._formatSleepRemaining(remainingSeconds)
+    };
+  }
+
+  onSleepTimerUpdate(callback) {
+    if (typeof callback !== 'function') return () => {};
+    this.listeners.sleepTimerUpdate.add(callback);
+    callback(this.getSleepTimerState());
+    return () => this.listeners.sleepTimerUpdate.delete(callback);
   }
 
   setVolume(level) {
