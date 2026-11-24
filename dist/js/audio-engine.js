@@ -141,24 +141,34 @@ class AudioEngine {
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
           document.body?.classList.add('svx-screen-off');
+
+          // Check if current track is Discover or Post/Reel
+          const isDiscover = this.currentTrack && (
+            this.currentTrack.source === 'discover' || 
+            this.currentTrack.source === 'cdn' || 
+            this.currentTrack.source === 'jiosaavn' || 
+            this.currentTrack.source === 'itunes'
+          );
+
+          // Reels or Post audio: NEVER play in background!
+          if (!isDiscover || !this.backgroundPlaybackEnabled) {
+            console.log('[SVX Audio] App backgrounded, auto-pausing non-discover audio:', this.currentTrack?.source);
+            this.pause(true);
+            return;
+          }
+
+          // Discover music: maintain continuous, full-volume background stream
+          console.log('[SVX Audio] App backgrounded, maintaining persistent Discover background playback stream...');
           clearInterval(this._fadeTimer);
           this._fadeTimer = null;
-          // Ensure volume is always full in background (never muted)
           if (this.audio) {
             this.audio.volume = this.DEFAULT_VOLUME || 0.95;
           }
-          if (this._isPlaying) {
-            if (!this.backgroundPlaybackEnabled) {
-              console.log('[SVX Audio] App backgrounded, auto-pausing audio (Background Playback is OFF)');
-              this.pause(true);
-            } else {
-              console.log('[SVX Audio] App backgrounded, maintaining persistent background playback stream...');
-              this._acquireWakeLock();
-              // Verify continuity: if audio was paused by webview backgrounding, restart immediately
-              if (this.audio && this.audio.paused) {
-                this.audio.play().catch(() => {});
-              }
-            }
+          this._acquireWakeLock();
+
+          // Verify playback continuity: if Android WebView paused HTMLAudioElement, immediately resume
+          if (this._isPlaying && this.audio && this.audio.paused) {
+            this.audio.play().catch(() => {});
           }
         } else {
           document.body?.classList.remove('svx-screen-off');
@@ -167,9 +177,16 @@ class AudioEngine {
           if (this.audio) {
             this.audio.volume = this.DEFAULT_VOLUME || 0.95;
           }
-          // When returning to foreground: verify playback continuity
-          if (this._isPlaying && this.audio && this.audio.paused && this.backgroundPlaybackEnabled) {
-            console.log('[SVX Audio] Restoring audio continuity on foreground return...');
+
+          // When returning to foreground: restore Discover continuity if paused
+          const isDiscover = this.currentTrack && (
+            this.currentTrack.source === 'discover' || 
+            this.currentTrack.source === 'cdn' || 
+            this.currentTrack.source === 'jiosaavn' || 
+            this.currentTrack.source === 'itunes'
+          );
+          if (isDiscover && this._isPlaying && this.audio && this.audio.paused && this.backgroundPlaybackEnabled) {
+            console.log('[SVX Audio] Restoring Discover audio continuity on foreground return...');
             this.audio.play().catch(() => {});
           }
         }
@@ -352,7 +369,7 @@ class AudioEngine {
     if (!['loop', 'sequential', 'shuffle'].includes(mode)) return;
     this.playbackMode = mode;
     if (this.audio) {
-      this.audio.loop = (mode === 'loop');
+      this.audio.loop = mode === 'loop';
     }
     this._notify('modeChange', { mode });
   }
@@ -470,6 +487,7 @@ class AudioEngine {
   fadeIn(durationMs = 220) {
     if (!this.audio) return;
     clearInterval(this._fadeTimer);
+    this._fadeTimer = null;
     const targetVolume = this.DEFAULT_VOLUME || 0.95;
     if (typeof document !== 'undefined' && document.hidden) {
       this.audio.volume = targetVolume;
@@ -526,17 +544,20 @@ class AudioEngine {
           clearInterval(this._sleepFadeTimer);
           this._sleepFadeTimer = null;
         }
-        if (this.audio) {
+        if (typeof document !== 'undefined' && document.hidden) {
           this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          await this.audio.play();
+        } else {
+          await this.audio.play();
+          this.fadeIn(200);
         }
-        await this.audio.play();
       } catch (err) {
         console.warn('[SVX Audio] Resume error:', err);
       }
     }
   }
 
-  async play(url, metadata = {}) {
+  async play(url, metadata = {}, options = {}) {
     if (!url) {
       if (this.currentTrack) {
         return this.resume();
@@ -551,6 +572,9 @@ class AudioEngine {
     // If same track is already loaded:
     if (this.currentTrack && this.currentTrack.url === url) {
       if (this._isPlaying && this.audio && !this.audio.paused) {
+        if (metadata.source) {
+          this.currentTrack.source = metadata.source;
+        }
         return; // Continuous playback without stutter
       }
       try {
@@ -561,36 +585,55 @@ class AudioEngine {
           clearInterval(this._sleepFadeTimer);
           this._sleepFadeTimer = null;
         }
-        if (this.audio) {
-          this.audio.volume = this.DEFAULT_VOLUME || 0.95;
-          this.audio.loop = (this.playbackMode === 'loop');
-        }
         if (metadata.source) {
           this.currentTrack.source = metadata.source;
         }
-        await this.audio.play();
+        if (typeof document !== 'undefined' && document.hidden) {
+          this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          await this.audio.play();
+        } else {
+          await this.audio.play();
+          const resumeFadeIn = typeof options.fadeInMs === 'number' ? options.fadeInMs : 200;
+          this.fadeIn(resumeFadeIn);
+        }
         return;
       } catch (err) {
         console.warn('[SVX Audio] Resume failed, re-loading track:', err);
       }
     }
 
-    // Stop previous track immediately without blocking delay (NEVER await setInterval in play)
-    this._isSleepFading = false;
-    clearInterval(this._fadeTimer);
-    this._fadeTimer = null;
-    if (this._sleepFadeTimer) {
-      clearInterval(this._sleepFadeTimer);
-      this._sleepFadeTimer = null;
+    // Monotonic request counter to prevent race conditions during rapid skipping
+    const reqId = ++this._playRequestId;
+
+    const fadeOutDuration = typeof options.fadeOutMs === 'number' ? options.fadeOutMs : 180;
+    const fadeInDuration = typeof options.fadeInMs === 'number' ? options.fadeInMs : 220;
+
+    // Smooth micro fade-out of old track if currently playing
+    if (this._isPlaying && this.audio && !this.audio.paused && !options.immediate) {
+      if (fadeOutDuration > 0 && !(typeof document !== 'undefined' && document.hidden)) {
+        await this.fadeOut(fadeOutDuration);
+        if (reqId !== this._playRequestId) return; // Superseded by a newer play request
+      } else {
+        clearInterval(this._fadeTimer);
+        this._fadeTimer = null;
+        if (this.audio) {
+          try { this.audio.pause(); } catch {}
+        }
+      }
+    } else {
+      clearInterval(this._fadeTimer);
+      this._fadeTimer = null;
+      if (this.audio) {
+        try { this.audio.pause(); } catch {}
+      }
     }
-    if (this._isPlaying && this.audio) {
-      try {
-        this.audio.pause();
-      } catch {}
-    }
-    // ALWAYS initialize volume to 0.95 synchronously (NEVER 0, which breaks in background)
-    if (this.audio) {
-      this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+
+    if (this._isSleepFading) {
+      this._isSleepFading = false;
+      if (this._sleepFadeTimer) {
+        clearInterval(this._sleepFadeTimer);
+        this._sleepFadeTimer = null;
+      }
     }
 
     // Switch to new track
@@ -599,7 +642,7 @@ class AudioEngine {
       name: metadata.name || 'Unknown Track',
       artist: metadata.artist || 'Unknown Artist',
       art: metadata.art || null,
-      source: metadata.source || 'cdn'
+      source: metadata.source || 'discover'
     };
 
     if (this.playlist.length > 0) {
@@ -611,6 +654,9 @@ class AudioEngine {
 
     if (this.audio) {
       this.audio.loop = (this.playbackMode === 'loop');
+      try {
+        this.audio.volume = (typeof document !== 'undefined' && document.hidden) ? (this.DEFAULT_VOLUME || 0.95) : 0;
+      } catch {}
     }
 
     this._notify('trackChange', this.currentTrack);
@@ -628,12 +674,27 @@ class AudioEngine {
         console.log('[SVX Audio] CDN edge fallback to direct raw GitHub stream:', rawUrl);
         this.audio.src = rawUrl;
         this.audio.load();
-        this.audio.play().catch(() => {});
+        this.audio.play().then(() => {
+          if (typeof document !== 'undefined' && document.hidden) {
+            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          } else if (fadeInDuration > 0) {
+            this.fadeIn(fadeInDuration);
+          } else if (this.audio) {
+            this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          }
+        }).catch(() => {});
       }
     };
 
     try {
       await this.audio.play();
+      if (typeof document !== 'undefined' && document.hidden) {
+        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+      } else if (fadeInDuration > 0) {
+        this.fadeIn(fadeInDuration);
+      } else if (this.audio) {
+        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+      }
     } catch (err) {
       console.warn('[SVX Audio] Play request prevented by browser autoplay policy:', err);
       this._isPlaying = false;
@@ -642,9 +703,8 @@ class AudioEngine {
   }
 
   pause(immediate = false) {
-    if (immediate || (typeof document !== 'undefined' && document.hidden)) {
+    if (immediate) {
       clearInterval(this._fadeTimer);
-      this._fadeTimer = null;
       if (this.audio) {
         try { this.audio.pause(); } catch {}
         this.audio.volume = this.DEFAULT_VOLUME || 0.95;
@@ -679,15 +739,10 @@ class AudioEngine {
   async togglePlayPause(url, metadata = {}) {
     if (this.currentTrack && this.currentTrack.url === url) {
       if (this._isPlaying) {
-        this.pause();
+        await this.fadeOut(200);
       } else {
-        if (this.audio) {
-          this.audio.loop = (this.playbackMode === 'loop');
-        }
-        if (metadata.source) {
-          this.currentTrack.source = metadata.source;
-        }
         await this.audio.play();
+        this.fadeIn(200);
       }
     } else {
       await this.play(url, metadata);
@@ -739,9 +794,8 @@ class AudioEngine {
 
     const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
 
-    // Gentle 6-second soft decay so sleep is never abruptly interrupted (foreground only, never blocks background)
-    const isBackgrounded = typeof document !== 'undefined' && document.hidden;
-    if (remainingSeconds <= 6 && !isBackgrounded && !this._isSleepFading && this._isPlaying && this.audio) {
+    // Gentle 6-second soft decay so sleep is never abruptly interrupted
+    if (remainingSeconds <= 6 && !this._isSleepFading && this._isPlaying && this.audio) {
       this._isSleepFading = true;
       this._fadeSleepTimer(remainingSeconds * 1000);
     }

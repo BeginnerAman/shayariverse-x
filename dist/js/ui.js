@@ -970,7 +970,6 @@ export class SVXFeedController {
         const songArtist = pill?.querySelector('.svx-song-artist')?.textContent;
 
         if (songUrl) {
-          audioEngine.setPlaybackMode('loop');
           audioEngine.togglePlayPause(songUrl, { name: songTitle, artist: songArtist, source: 'post' });
         }
       } else if (action === 'like' && shayariId) {
@@ -1098,8 +1097,8 @@ export class SVXMusicController {
     this.miniPlayBtn = document.getElementById('svx-mini-player-play-btn');
     this.miniNextBtn = document.getElementById('svx-mini-player-next-btn');
     this.miniCloseBtn = document.getElementById('svx-mini-player-close-btn');
+    this.miniSettingsBtn = document.getElementById('svx-mini-player-settings-btn') || document.getElementById('svx-mini-player-timer-btn');
     this.miniTimerBtn = document.getElementById('svx-mini-player-timer-btn');
-    this.miniSettingsBtn = document.getElementById('svx-mini-player-settings-btn');
     this.miniTrackArea = document.getElementById('svx-mini-player-track-area');
     this.miniBgPopup = document.getElementById('svx-mini-player-bg-popup');
     this.miniBgToggle = document.getElementById('svx-bg-audio-toggle');
@@ -1217,7 +1216,7 @@ export class SVXMusicController {
       } else {
         const list = audioEngine.getPlaylist();
         if (list.length > 0) {
-          audioEngine.play(list[0].url, list[0]);
+          audioEngine.play(list[0].url, { ...list[0], source: 'discover' });
         }
       }
     });
@@ -1258,9 +1257,7 @@ export class SVXMusicController {
       toggleBgPopup();
     };
     this.miniTimerBtn?.addEventListener('click', openTimerPopup);
-    if (this.miniSettingsBtn && this.miniSettingsBtn !== this.miniTimerBtn) {
-      this.miniSettingsBtn.addEventListener('click', openTimerPopup);
-    }
+    this.miniSettingsBtn?.addEventListener('click', openTimerPopup);
 
     // Sleep Timer Presets (15m, 30m, 45m, 60m)
     this.sleepTimerChips.forEach(chip => {
@@ -1666,7 +1663,7 @@ export class SVXMusicController {
         name: track.name,
         artist: track.artist,
         art: track.art,
-        source: 'discover'
+        source: track.source || 'discover'
       });
     });
 
@@ -2871,7 +2868,6 @@ export class SVXProfileController {
         const songTitle = pill?.querySelector('.svx-song-title')?.textContent;
         const songArtist = pill?.querySelector('.svx-song-artist')?.textContent;
         if (songUrl) {
-          audioEngine.setPlaybackMode('loop');
           audioEngine.togglePlayPause(songUrl, { name: songTitle, artist: songArtist, source: 'post' });
         }
       } else if (action === 'like' && shayariId) {
@@ -3293,7 +3289,6 @@ export class SVXReelsController {
 
     const firstSlide = this.container.querySelector('.svx-reel-slide:not(.svx-reel-end-slide)');
     if (firstSlide) {
-      this.activeSlide = firstSlide;
       setTimeout(() => {
         const router = typeof this.getRouter === 'function' ? this.getRouter() : this.getRouter;
         if (router && router.currentView === 'reels') {
@@ -3536,8 +3531,8 @@ export class SVXReelsController {
             name: shayari.song_name || 'Shayari BGM',
             artist: shayari.song_artist || shayari.author_name || 'Viral Audio',
             source: 'reel'
-          }).then(() => {
-            if (audioEngine.audio) audioEngine.audio.loop = true;
+          }, {
+            fadeInMs: 120
           }).catch(() => {});
           showToast("Music playing", "Volume2", 1500);
         }
@@ -3577,7 +3572,6 @@ export class SVXReelsController {
       const musicPill = slide.querySelector('.svx-reel-music-pill');
       vinyl?.classList.add('spinning');
       musicPill?.classList.remove('muted');
-      if (audioEngine.audio) audioEngine.audio.loop = true;
       return;
     }
 
@@ -3599,8 +3593,9 @@ export class SVXReelsController {
           name: shayari.song_name || 'Shayari BGM',
           artist: shayari.song_artist || shayari.author_name || 'Viral Audio',
           source: 'reel'
-        }).then(() => {
-          if (audioEngine.audio) audioEngine.audio.loop = true;
+        }, {
+          fadeOutMs: 60,
+          fadeInMs: 120
         }).catch(err => {
           console.warn('[SVX Reels] Autoplay blocked by browser policy:', err);
         });
@@ -3616,7 +3611,7 @@ export class SVXReelsController {
   pause() {
     clearTimeout(this._audioPlayTimeout);
     this._audioPlayTimeout = null;
-    // Retain this.activeSlide so returning to reels tab can resume audio immediately
+    this.activeSlide = null;
     const currentTrack = audioEngine.getCurrentTrack();
     const isPlayingReelTrack = this.reels && this.reels.some(r => r.song_url && r.song_url === currentTrack?.url);
     if (isPlayingReelTrack) {
@@ -3640,39 +3635,21 @@ export class SVXReelsController {
       this.syncUserLikes();
     }
 
-    // If activeSlide is missing or disconnected, re-resolve active or first slide
-    if (!this.activeSlide || !this.activeSlide.isConnected) {
-      this.activeSlide = this.container.querySelector('.svx-reel-slide.active-slide') ||
-                         this.container.querySelector('.svx-reel-slide:not(.svx-reel-end-slide)');
-    }
+    if (this.activeSlide && !this.isMuted) {
+      const shayari = this.activeSlide._shayari;
+      if (shayari?.song_url) {
+        const vinyl = this.activeSlide.querySelector('.svx-vinyl-disc');
+        vinyl?.classList.add('spinning');
 
-    if (this.activeSlide) {
-      this.container.querySelectorAll('.svx-reel-slide').forEach(s => s.classList.remove('active-slide'));
-      this.activeSlide.classList.add('active-slide');
-
-      if (!this.isMuted) {
-        const shayari = this.activeSlide._shayari;
-        if (shayari?.song_url) {
-          const vinyl = this.activeSlide.querySelector('.svx-vinyl-disc');
-          const musicPill = this.activeSlide.querySelector('.svx-reel-music-pill');
-          vinyl?.classList.add('spinning');
-          musicPill?.classList.remove('muted');
-
-          audioEngine.play(shayari.song_url, {
-            name: shayari.song_name || 'Shayari BGM',
-            artist: shayari.song_artist || shayari.author_name || 'Viral Audio',
-            source: 'reel'
-          }).then(() => {
-            if (audioEngine.audio) audioEngine.audio.loop = true;
-          }).catch(() => {});
-        } else {
-          audioEngine.pause(true);
-        }
-      } else {
-        audioEngine.pause(true);
+        audioEngine.play(shayari.song_url, {
+          name: shayari.song_name || 'Shayari BGM',
+          artist: shayari.song_artist || shayari.author_name || 'Viral Audio',
+          source: 'reel'
+        }, {
+          fadeOutMs: 60,
+          fadeInMs: 120
+        }).catch(() => {});
       }
-    } else {
-      audioEngine.pause(true);
     }
   }
 
@@ -3798,7 +3775,6 @@ export class SVXRouter {
     if (viewName !== 'reels') {
       this.reelsController?.pause();
     } else {
-      // Immediately stop any Feed or Discover audio before entering Reels
       audioEngine.pause(true);
       this.reelsController?.resume();
     }
