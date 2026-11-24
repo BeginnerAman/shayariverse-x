@@ -78,6 +78,16 @@ class AudioEngine {
     });
 
     this.audio.addEventListener('ended', () => {
+      const isPostOrReel = this.currentTrack && (this.currentTrack.source === 'post' || this.currentTrack.source === 'reel');
+      if (isPostOrReel) {
+        // Individual couplet posts and reels must loop seamlessly without jumping to another track
+        try {
+          this.audio.currentTime = 0;
+          this.audio.play().catch(() => {});
+        } catch {}
+        return;
+      }
+
       this._isPlaying = false;
       this._notify('playState', { isPlaying: false, track: this.currentTrack });
 
@@ -351,8 +361,9 @@ class AudioEngine {
   setPlaybackMode(mode) {
     if (!['loop', 'sequential', 'shuffle'].includes(mode)) return;
     this.playbackMode = mode;
+    const isPostOrReel = this.currentTrack && (this.currentTrack.source === 'post' || this.currentTrack.source === 'reel');
     if (this.audio) {
-      this.audio.loop = mode === 'loop';
+      this.audio.loop = isPostOrReel ? true : (mode === 'loop');
     }
     this._notify('modeChange', { mode });
   }
@@ -395,7 +406,7 @@ class AudioEngine {
     this.currentIndex = nextIndex;
     const nextTrack = this.playlist[nextIndex];
     if (nextTrack) {
-      this.play(nextTrack.url, nextTrack);
+      this.play(nextTrack.url, { ...nextTrack, source: 'discover' });
     }
   }
 
@@ -415,7 +426,7 @@ class AudioEngine {
     this.currentIndex = prevIndex;
     const prevTrack = this.playlist[prevIndex];
     if (prevTrack) {
-      this.play(prevTrack.url, prevTrack);
+      this.play(prevTrack.url, { ...prevTrack, source: 'discover' });
     }
   }
 
@@ -563,6 +574,12 @@ class AudioEngine {
         }
         if (this.audio) {
           this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+          const isPostOrReel = metadata.source === 'post' || metadata.source === 'reel' ||
+            (this.currentTrack && (this.currentTrack.source === 'post' || this.currentTrack.source === 'reel'));
+          this.audio.loop = isPostOrReel ? true : (this.playbackMode === 'loop');
+        }
+        if (metadata.source) {
+          this.currentTrack.source = metadata.source;
         }
         await this.audio.play();
         return;
@@ -590,6 +607,7 @@ class AudioEngine {
     }
 
     // Switch to new track
+    const isPostOrReel = metadata.source === 'post' || metadata.source === 'reel';
     this.currentTrack = {
       url,
       name: metadata.name || 'Unknown Track',
@@ -606,7 +624,7 @@ class AudioEngine {
     }
 
     if (this.audio) {
-      this.audio.loop = (this.playbackMode === 'loop');
+      this.audio.loop = isPostOrReel ? true : (this.playbackMode === 'loop');
     }
 
     this._notify('trackChange', this.currentTrack);
@@ -677,6 +695,14 @@ class AudioEngine {
       if (this._isPlaying) {
         this.pause();
       } else {
+        const isPostOrReel = metadata.source === 'post' || metadata.source === 'reel' ||
+          (this.currentTrack && (this.currentTrack.source === 'post' || this.currentTrack.source === 'reel'));
+        if (this.audio) {
+          this.audio.loop = isPostOrReel ? true : (this.playbackMode === 'loop');
+        }
+        if (metadata.source) {
+          this.currentTrack.source = metadata.source;
+        }
         await this.audio.play();
       }
     } else {
