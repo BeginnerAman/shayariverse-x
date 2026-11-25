@@ -808,10 +808,6 @@ class AudioEngine {
         try { standbyPlayer.pause(); standbyPlayer.currentTime = 0; } catch {}
       }
 
-      if (this.audio) {
-        try { this.audio.pause(); } catch {}
-      }
-
       this.currentTrack = {
         url,
         name: metadata.name || 'Post Audio',
@@ -820,18 +816,38 @@ class AudioEngine {
         source: metadata.source
       };
 
-      this.audio.loop = false;
-      this.audio.volume = this.DEFAULT_VOLUME || 0.95;
-      this.audio.src = url;
-      try {
-        await this.audio.play();
-        this._isPlaying = true;
-        this._acquireWakeLock();
-        this._notify('trackChange', this.currentTrack);
-        this._notify('playState', { isPlaying: true, track: this.currentTrack });
-      } catch (err) {
-        this._isPlaying = false;
-        this._notify('playState', { isPlaying: false, track: this.currentTrack });
+      if (this.audio) {
+        this.audio.loop = (metadata.source === 'reel');
+        this.audio.volume = this.DEFAULT_VOLUME || 0.95;
+
+        // If same audio URL was already set on player, rewind and play directly without network reload
+        if (this.audio.src === url || (this.audio.src && this.audio.src.endsWith(url))) {
+          try {
+            this.audio.currentTime = 0;
+            await this.audio.play();
+            this._isPlaying = true;
+            this._acquireWakeLock();
+            this._notify('trackChange', this.currentTrack);
+            this._notify('playState', { isPlaying: true, track: this.currentTrack });
+            return;
+          } catch (e) {
+            // Fall through to re-assign if needed
+          }
+        }
+
+        try { this.audio.pause(); } catch {}
+        this.audio.src = url;
+        this.audio.currentTime = 0;
+        try {
+          await this.audio.play();
+          this._isPlaying = true;
+          this._acquireWakeLock();
+          this._notify('trackChange', this.currentTrack);
+          this._notify('playState', { isPlaying: true, track: this.currentTrack });
+        } catch (err) {
+          this._isPlaying = false;
+          this._notify('playState', { isPlaying: false, track: this.currentTrack });
+        }
       }
       return;
     }

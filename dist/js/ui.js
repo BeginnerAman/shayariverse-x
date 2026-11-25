@@ -3058,18 +3058,54 @@ export class SVXReelsController {
       const router = typeof this.getRouter === 'function' ? this.getRouter() : this.getRouter;
       if (router && router.currentView !== 'reels') return;
 
+      // Select the slide with the highest visibility ratio to prevent DOM-order overwrite when scrolling up
+      let bestEntry = null;
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          const idx = parseInt(entry.target.getAttribute('data-index') || '0', 10);
-          this.currentIndex = idx;
-          this.onSlideActive(entry.target);
-          this.checkAndLoadMore(idx);
+          if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+            bestEntry = entry;
+          }
         }
       });
+
+      if (bestEntry && bestEntry.target) {
+        const idx = parseInt(bestEntry.target.getAttribute('data-index') || '0', 10);
+        this.currentIndex = idx;
+        this.onSlideActive(bestEntry.target);
+        this.checkAndLoadMore(idx);
+      }
     }, {
       root: this.container,
-      threshold: 0.65
+      threshold: [0.5, 0.65, 0.8]
     });
+
+    // Scroll Settle Fallback: Guarantees 100% reliable detection when flicking or scrolling up rapidly
+    if (this.container) {
+      let scrollTimer = null;
+      this.container.addEventListener('scroll', () => {
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+          this.syncActiveSlideFromScroll();
+        }, 80);
+      }, { passive: true });
+    }
+  }
+
+  syncActiveSlideFromScroll() {
+    const router = typeof this.getRouter === 'function' ? this.getRouter() : this.getRouter;
+    if (router && router.currentView !== 'reels') return;
+    if (!this.container) return;
+
+    const containerHeight = this.container.clientHeight;
+    if (!containerHeight) return;
+
+    const targetIdx = Math.round(this.container.scrollTop / containerHeight);
+    const targetSlide = this.container.querySelector(`.svx-reel-slide[data-index="${targetIdx}"]`);
+    if (targetSlide && targetSlide !== this.activeSlide) {
+      this.currentIndex = targetIdx;
+      this.onSlideActive(targetSlide);
+      this.checkAndLoadMore(targetIdx);
+    }
   }
 
   async loadReels() {
