@@ -440,6 +440,14 @@ class AudioEngine {
   }
 
   _peekNextTrack() {
+    if (!this.playlist || this.playlist.length === 0) {
+      if (this._curatedCache && Array.isArray(this._curatedCache)) {
+        const allTracks = this._curatedCache.flatMap(cat => cat.tracks || []);
+        if (allTracks.length > 0) {
+          this.setPlaylist(allTracks);
+        }
+      }
+    }
     if (!this.playlist || this.playlist.length === 0) return null;
     let nextIndex;
     if (this.playbackMode === 'shuffle') {
@@ -526,6 +534,7 @@ class AudioEngine {
             outgoingPlayer.pause();
             outgoingPlayer.currentTime = 0;
             outgoingPlayer.volume = maxVolume;
+            outgoingPlayer.loop = (this.playbackMode === 'loop');
           } catch {}
 
           incomingPlayer.volume = maxVolume;
@@ -774,6 +783,10 @@ class AudioEngine {
           this.currentTrack.source === 'jiosaavn' || 
           this.currentTrack.source === 'itunes'
         );
+        if (isDiscover) {
+          if (this.audioA) this.audioA.loop = (this.playbackMode === 'loop');
+          if (this.audioB) this.audioB.loop = (this.playbackMode === 'loop');
+        }
         await activePlayer.play();
         this._isPlaying = true;
         this._acquireWakeLock();
@@ -855,6 +868,10 @@ class AudioEngine {
     // Discover Music
     const isDiscover = true;
 
+    // Enforce playback mode loop setting across both players for non-reel tracks
+    if (this.audioA) this.audioA.loop = (this.playbackMode === 'loop');
+    if (this.audioB) this.audioB.loop = (this.playbackMode === 'loop');
+
     // Same track already playing: resume or update
     if (this.currentTrack && this.currentTrack.url === url) {
       const activePlayer = this.audio || (this.activePlayerId === 'A' ? this.audioA : this.audioB);
@@ -865,6 +882,7 @@ class AudioEngine {
         this._isSleepFading = false;
         clearInterval(this._fadeTimer);
         this._fadeTimer = null;
+        activePlayer.loop = (this.playbackMode === 'loop');
         await activePlayer.play();
         this._isPlaying = true;
         this._acquireWakeLock();
@@ -912,6 +930,7 @@ class AudioEngine {
                 activePlayer.pause();
                 activePlayer.currentTime = 0;
                 activePlayer.volume = maxVol;
+                activePlayer.loop = (this.playbackMode === 'loop');
               } catch {}
               standbyPlayer.volume = maxVol;
 
@@ -1237,6 +1256,12 @@ class AudioEngine {
    */
   async loadCuratedBGM() {
     if (this._curatedCache && Array.isArray(this._curatedCache) && this._curatedCache.length > 0) {
+      if (!this.playlist || this.playlist.length === 0) {
+        const allTracks = this._curatedCache.flatMap(cat => cat.tracks || []);
+        if (allTracks.length > 0) {
+          this.setPlaylist(allTracks);
+        }
+      }
       return this._curatedCache;
     }
 
@@ -1340,6 +1365,12 @@ class AudioEngine {
       }
     ];
     this._curatedCache = fallback;
+    if (!this.playlist || this.playlist.length === 0) {
+      const allTracks = fallback.flatMap(cat => cat.tracks || []);
+      if (allTracks.length > 0) {
+        this.setPlaylist(allTracks);
+      }
+    }
     return fallback;
   }
 

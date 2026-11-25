@@ -1211,12 +1211,19 @@ export class SVXMusicController {
     this.miniPlayBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       const current = audioEngine.getCurrentTrack();
-      if (current) {
+      if (current && current.source !== 'reel') {
         audioEngine.togglePlayPause(current.url, current);
       } else {
         const list = audioEngine.getPlaylist();
         if (list.length > 0) {
           audioEngine.play(list[0].url, { ...list[0], source: 'discover' });
+        } else {
+          audioEngine.loadCuratedBGM().then(cats => {
+            const all = (cats || []).flatMap(c => c.tracks || []);
+            if (all.length > 0) {
+              audioEngine.play(all[0].url, { ...all[0], source: 'discover' });
+            }
+          });
         }
       }
     });
@@ -3810,6 +3817,8 @@ export class SVXRouter {
     // Handle Reels Audio Auto-Stop / Auto-Resume
     if (viewName !== 'reels') {
       this.reelsController?.pause();
+      if (audioEngine.audioA) audioEngine.audioA.loop = (audioEngine.playbackMode === 'loop');
+      if (audioEngine.audioB) audioEngine.audioB.loop = (audioEngine.playbackMode === 'loop');
     } else {
       audioEngine.pause(true);
       this.reelsController?.resume();
