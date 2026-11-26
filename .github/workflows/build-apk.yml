@@ -83,6 +83,11 @@ jobs:
           gh release create ${{ env.APP_TAG }} build-artifacts/ShayariVerse-X-${{ env.APP_TAG }}.apk build-artifacts/ShayariVerse-X-Latest.apk \
             --title "ShayariVerse X ${{ env.APP_TAG }}" \
             --notes "### ShayariVerse X ${{ env.APP_TAG }} Release Notes
+          - **Dual-Player Studio DJ Crossfade**: True overlapping crossfade with simultaneous volume fading (outgoing fades down while incoming blooms up) for 100% zero-gap Discover playback.
+          - **Continuous Lock Screen & Background Crossfade**: Pre-buffering incoming audio 8 seconds in advance to guarantee seamless track switching even with screen locked or in background.
+          - **Liquid Glass Audio Sleep Timer**: Ambient sleep timer with smooth 15s/6s fade-out decay, custom duration steppers (1m to 12h), live clamping, and unobtrusive timer notice.
+          - **Bidirectional Reels Audio Synchronization**: Continuous smooth auto-play when scrolling both down and up through Reels with slide intersection prioritization.
+          - **Strict Audio Loop Isolation**: Completely isolated native audio loop flags between Reels and Discover, ensuring Shuffle mode continuously advances to random tracks.
           - **Screen-Off Background Power Conservation**: Automatically pauses all CSS keyframe animations when device is locked or minimized, reducing background battery draw by up to 25% while audio continues playing seamlessly.
           - **Isolate Feed Card Paint Bounds**: Added CSS containment to feed cards to eliminate unnecessary layout and style recalculations during scrolling.
           - **Crystal-Clear Background Audio & Native CPU WakeLock**: Added native Android PowerManager PARTIAL_WAKE_LOCK to MediaSessionService to prevent CPU sleep and eliminate buffer dropouts when the screen is locked.
